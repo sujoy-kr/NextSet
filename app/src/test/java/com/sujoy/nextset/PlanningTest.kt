@@ -128,6 +128,55 @@ class PlanningTest {
     }
 
     @Test
+    fun weeklyAnalysisUsesTheCurrentTimezoneAtWeekBoundaries() {
+        val start = LocalDate.of(2026, 11, 16)
+        val at = start.minusDays(1).atTime(23, 30).toInstant(ZoneOffset.UTC).toEpochMilli()
+        val workout =
+            WorkoutTemplate(
+                name = "Push",
+                blocks =
+                    listOf(
+                        WorkoutBlock(
+                            exercises = listOf(Exercise(name = "Press", rests = listOf(0)))
+                        )
+                    ),
+            )
+        val session =
+            WorkoutSession(
+                "s",
+                workout,
+                at,
+                at,
+                SessionStatus.COMPLETED,
+                listOf(CompletedSet(0, at)),
+            )
+        assertTrue(
+            weeklyVolume(
+                    start,
+                    emptyList(),
+                    emptyMap(),
+                    RoutinePlan(),
+                    listOf(session),
+                    ZoneOffset.UTC,
+                )
+                .isEmpty()
+        )
+        assertEquals(
+            1,
+            weeklyVolume(
+                    start,
+                    emptyList(),
+                    emptyMap(),
+                    RoutinePlan(),
+                    listOf(session),
+                    ZoneId.of("Asia/Dhaka"),
+                )
+                .single()
+                .completed,
+        )
+    }
+
+    @Test
     fun weeklyAnalysisSupportsWeekdaysAndPreservesDeletedWorkoutHistory() {
         val workout =
             WorkoutTemplate(

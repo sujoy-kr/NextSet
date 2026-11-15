@@ -20,10 +20,23 @@ Android **7.0+ (API 24)** · Kotlin · Jetpack Compose · Material 3 · Room · 
 
 ## Screenshots
 
-Actual screenshots from the running app on an Android API 37 emulator. Workout names are demonstration data entered during testing; the app ships with an empty database.
+Fresh captures of the current app on an **Android 10 / API 29 emulator**, including duration estimates, both planning modes, weekly analysis, tone selection and dark theme. Workouts and completed sets are demonstration fixtures; the app ships with an empty database. The timer demonstration uses a one-second rest.
 
-<p><img src="docs/images/home.png" width="220" alt="Today's assigned workout on Home" /> <img src="docs/images/exercise.png" width="220" alt="Minimal exercise screen" /> <img src="docs/images/rest-complete.png" width="220" alt="Rest completion awaiting acknowledgment" /></p>
-<p><img src="docs/images/workouts.png" width="220" alt="Saved workout library" /> <img src="docs/images/week.png" width="220" alt="Weekly schedule editor" /> <img src="docs/images/settings-dark.png" width="220" alt="Dark theme and reminder settings" /></p>
+<p><img src="docs/images/home.png" width="220" alt="Home with exercise and set totals and estimated workout time" /> <img src="docs/images/workouts.png" width="220" alt="Workout library with duration estimates" /> <img src="docs/images/weekly-analysis.png" width="220" alt="Weekly analysis comparing completed and planned sets per exercise" /></p>
+<p><img src="docs/images/week.png" width="220" alt="Fixed weekday workout assignments" /> <img src="docs/images/sequence.png" width="220" alt="Repeating workout sequence with a start date and reorder controls" /> <img src="docs/images/sequence-preview.png" width="220" alt="Push, pull and rest repeating across the next seven days" /></p>
+<p><img src="docs/images/sound-settings.png" width="220" alt="Settings with ringtone and notification tone choices" /> <img src="docs/images/duration-settings.png" width="220" alt="Global time per set used for workout duration estimates" /> <img src="docs/images/settings-dark.png" width="220" alt="Dark theme and workout reminder settings" /></p>
+<p><img src="docs/images/exercise.png" width="220" alt="Exercise screen with one-second hold controls" /> <img src="docs/images/rest-complete.png" width="220" alt="Red rest-complete screen waiting for acknowledgment" /></p>
+
+### Refresh the screenshots
+
+With `adb` and Python 3 on your PATH, start a **fresh disposable emulator with no saved workouts or sessions**, then run:
+
+```sh
+./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+ANDROID_SERIAL=emulator-5554 ./scripts/capture-screenshots.sh
+```
+
+The opt-in instrumentation test seeds demo workouts/history and captures the actual UI. It refuses to replace existing workout data. The script updates all 11 PNGs only after the capture test succeeds and every file passes validation. Normal test runs skip this documentation-only test. Emulator captures do not verify physical audio, vibration or manufacturer battery behavior.
 
 ## Run locally
 
@@ -52,6 +65,21 @@ Initial dependency/toolchain downloads need internet on the development machine.
 
 Specific set overrides take priority over block defaults. Within supersets, movements with no remaining sets drop out of later rounds. Configured rest after the final workout set is retained. Rest has no product-imposed maximum; storage represents non-negative Int seconds.
 
+## Planning and analysis
+
+| Mode | How it repeats | Best for |
+| --- | --- | --- |
+| **Weekdays** | Assigned workouts repeat on the same weekdays; unassigned days are rest days. | Training on fixed days, such as Monday, Wednesday and Friday. |
+| **Repeating sequence** | Each workout or rest entry takes one calendar day, then the list repeats continuously. | Push → pull → rest, without restarting the cycle every Saturday or Monday. |
+
+In **Week → Repeating sequence**, add workouts or rest days, use the arrows to change their order, and choose **Change start date** or **Start day 1 today**. Dates before the start are unscheduled. **Next 7 days** previews the result. Switching modes keeps both plans saved. Completing, skipping or choosing a different workout does not move the calendar plan forward. A deleted workout’s sequence slot remains available to replace or remove; it is treated as rest until replaced.
+
+**History → Weekly analysis** follows your locale’s first weekday. Use **Previous**, **This week** and **Next** to compare planned and completed sets per exercise. Planned counts use the current templates and selected planning mode, including when viewing past weeks. Completed counts come from saved session snapshots and each set’s completion date in the current timezone, including abandoned or unfinished sessions. Matching exercise names are grouped without case or surrounding-space differences; renaming an exercise creates a separate group from its old history.
+
+Workout summaries on Home, in the library, in the workout picker and on the preparation screen show an approximate duration: **all configured rests + total sets × Time per set**. The global estimate defaults to **45 seconds per set**, can be changed in Settings, and does not change rest timers or limit how long a set can take. Per-set overrides, superset transitions and rest after the final set are included.
+
+In **Settings → Notification sound**, choose from **ringtones** or **notification tones**, or restore **App default**. The selected tone applies to both rest alerts and workout reminders when sound is enabled. Sound modes use alarm volume; **Follow device settings** uses notification volume. Android’s default ringtone and notification choices follow the system setting. If a custom tone is deleted or becomes inaccessible, alerts fall back to the app defaults. Android channel settings and Do Not Disturb still apply.
+
 ## Privacy and permissions
 
 Room and DataStore use private local app storage. There is **no INTERNET permission**. Android cloud backup and device-transfer backup are excluded. Uninstalling or clearing storage removes data; export/import is not currently available.
@@ -69,12 +97,12 @@ Reminders are off by default. Automatic timing uses up to 30 starts from the las
 
 ## Architecture
 
-- **`domain/`** — validated models, repository contracts, shared set/rest planner, deterministic reducer and reminder policy.
+- **`domain/`** — validated models, repository contracts, shared set/rest planner, weekday/sequence date resolution, duration estimates, weekly exercise volume, deterministic reducer and reminder policy.
 - **`data/`** — normalized templates → blocks → exercises, schedule relations, immutable session snapshots, transactional execution checkpoints and completed sets, reminder delivery ledger and DataStore preferences.
 - **`notifications/`** — monotonic clock adapter, serialized session runtime, permission-aware AlarmManager scheduling, receivers and notification channels.
 - **`ui/`** — Compose screens, lifecycle-aware ViewModels/StateFlow, saved editor drafts and navigation. `NextSetApplication` wires dependencies; Activity hosts Compose and consumes notification intents.
 
-Execution observes its checkpoint, session status and completed sets in one Room transaction. Template deletion clears schedule references without touching history. Session snapshots are independent of editable templates. Accepted execution transitions finish their persistence/alarm work even if their screen is removed.
+Execution observes its checkpoint, session status and completed sets in one Room transaction. Template deletion clears weekday assignments without touching history; sequence entries keep their position and can be replaced or removed. Session snapshots are independent of editable templates. Planning mode, sequence/start date, time per set and sound selection are stored locally in DataStore; the existing Room schema stays at version 3. Accepted execution transitions finish their persistence/alarm work even if their screen is removed.
 
 Schemas **1–3** are committed in `app/schemas`. Migrations preserve existing records; no destructive fallback is enabled. [Execution and recovery policies](docs/EXECUTION.md) describe deadlines, pauses, reboot behavior and reminder learning.
 
@@ -103,7 +131,7 @@ Follow [the exact build, signing and upgrade steps](docs/RELEASE.md). Nothing is
 - The interface is currently English. There is no export/import, cloud sync, history editing or reminder catch-up.
 - Notification permission, channel preferences, alarm volume (or notification volume in Follow device settings), Do Not Disturb, idle quotas and manufacturer battery policies may suppress/delay alerts. Grant precise-alarm access for background rest timing. Force-stopped apps must be reopened; revoking exact-alarm access can cancel alarms until the next launch.
 - Pauses freeze rest timers; elapsed workout duration includes pauses/background/device-off time. Across reboot plus a clock correction, exact timing reconstruction is impossible; recovery is bounded by the saved remainder.
-- Automated device coverage uses the available API 37 emulator. API 24 hardware, physical audio/haptics, TalkBack and manufacturer power policies remain manual validation.
+- The current screenshots use an API 29 emulator; earlier execution and migration coverage used API 37. API 24 hardware, physical audio/haptics, TalkBack and manufacturer power policies remain manual validation.
 - Dependencies are pinned for the tested toolchain. Lint can report newer available versions and a third-party Lifecycle lint API compatibility warning; these are documented, not hidden by a baseline.
 
 ## Contribute and license

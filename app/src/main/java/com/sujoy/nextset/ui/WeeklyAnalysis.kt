@@ -18,20 +18,29 @@ fun WeeklyAnalysis(state: AppState) {
         state.today
             .minusDays(((state.today.dayOfWeek.value - first.value + 7) % 7).toLong())
             .plusWeeks(offset)
+    val zone = state.zone
     val volumes =
-        remember(start, state.templates, state.schedule, state.settings.routine, state.sessions) {
+        remember(
+            start,
+            state.templates,
+            state.schedule,
+            state.settings.routine,
+            state.sessions,
+            zone,
+        ) {
             weeklyVolume(
                 start,
                 state.templates,
                 state.schedule,
                 state.settings.routine,
                 state.sessions,
+                zone,
             )
         }
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Weekly analysis", style = MaterialTheme.typography.titleLarge)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = { offset-- }) { Text("Previous") }
                 TextButton(onClick = { offset = 0 }) { Text("This week") }
                 TextButton(onClick = { offset++ }) { Text("Next") }

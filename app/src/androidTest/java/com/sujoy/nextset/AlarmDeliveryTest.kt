@@ -95,10 +95,18 @@ class AlarmDeliveryTest {
                 app.settings.alertMode(mode)
                 assertEquals(mode, app.settings.settings.first().alertMode)
                 app.notifications.rest(testId, index.toLong())
-                app.notifications.reminder("Alert mode test", testId)
+                val reminderDate = "$testId:$index"
+                app.notifications.reminder("Alert mode test", reminderDate)
+                withTimeout(5_000) {
+                    while (
+                        manager.activeNotifications.count {
+                            it.tag == "rest:$testId:$index" || it.tag == "day:$reminderDate"
+                        } != 2
+                    ) delay(50)
+                }
                 val posted =
                     manager.activeNotifications.filter {
-                        it.tag == "rest:$testId:$index" || it.tag == "day:$testId"
+                        it.tag == "rest:$testId:$index" || it.tag == "day:$reminderDate"
                     }
                 assertEquals(2, posted.size)
                 if (Build.VERSION.SDK_INT >= 26) {
@@ -116,12 +124,14 @@ class AlarmDeliveryTest {
                     }
                 }
                 app.notifications.clearRest(testId, index.toLong())
-                manager.cancel("day:$testId", 20)
+                manager.cancel("day:$reminderDate", 20)
             }
         } finally {
             app.settings.alertMode(previous)
-            AlertMode.entries.indices.forEach { app.notifications.clearRest(testId, it.toLong()) }
-            manager.cancel("day:$testId", 20)
+            AlertMode.entries.indices.forEach {
+                app.notifications.clearRest(testId, it.toLong())
+                manager.cancel("day:$testId:$it", 20)
+            }
         }
     }
 

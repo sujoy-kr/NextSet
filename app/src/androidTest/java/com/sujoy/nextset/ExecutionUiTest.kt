@@ -47,6 +47,14 @@ class ExecutionUiTest {
         Unit
     }
 
+    private fun assertTextDisplayed(text: String) {
+        // A committed Room checkpoint can arrive before its lifecycle-aware UI observation.
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(text).assertIsDisplayed()
+    }
+
     @Test
     fun shortTapsDoNothingAndOneSecondHoldCompletesOnlyOneSet() {
         val id = start(0)
@@ -66,11 +74,11 @@ class ExecutionUiTest {
         compose.waitUntil(10_000) {
             runBlocking { app.execution.observe(id).first()!!.session.completedSets.size == 1 }
         }
-        compose.onNodeWithText("SET 2 OF 2").assertIsDisplayed()
+        assertTextDisplayed("SET 2 OF 2")
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("SET 2 OF 2").assertIsDisplayed()
+        assertTextDisplayed("SET 2 OF 2")
         compose.onNodeWithContentDescription("Undo last set").performClick()
-        compose.onNodeWithText("SET 1 OF 2").assertIsDisplayed()
+        assertTextDisplayed("SET 1 OF 2")
     }
 
     @Test
@@ -84,13 +92,13 @@ class ExecutionUiTest {
         compose.waitUntil(10_000) {
             runBlocking { app.execution.read(id)?.phase == Phase.REST_DONE }
         }
-        compose.onNodeWithText("00:00").assertIsDisplayed()
+        assertTextDisplayed("00:00")
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("REST COMPLETE").assertIsDisplayed()
+        assertTextDisplayed("REST COMPLETE")
         val state = runBlocking { app.execution.read(id)!! }
         assertEquals(Phase.REST_DONE, state.phase)
         runBlocking { app.runtime.command(id, state.revision, Command.HOLD) }
-        compose.onNodeWithText("SET 2 OF 2").assertIsDisplayed()
+        assertTextDisplayed("SET 2 OF 2")
     }
 
     private fun holdFor(millis: Long) {
@@ -126,6 +134,7 @@ class ExecutionUiTest {
         }
         compose.onNodeWithText("Back to Home").performClick()
         compose.onNodeWithText("History", useUnmergedTree = true).performClick()
-        compose.onNodeWithText("Completed · 2/2 sets").performScrollTo().assertIsDisplayed()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Completed · 2/2 sets"))
+        compose.onNodeWithText("Completed · 2/2 sets").assertIsDisplayed()
     }
 }

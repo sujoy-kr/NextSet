@@ -30,8 +30,23 @@ fun SoundSettings(soundUri: String?, onSound: (String?) -> Unit) {
                         )
                     }
                 if (uri != null && uri.scheme in listOf("content", "android.resource")) {
-                    onSound(uri.toString())
                     error = false
+                    val flags = result.data?.flags ?: 0
+                    if (
+                        flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0 &&
+                            flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0
+                    ) {
+                        // System media tones normally need no grant; custom providers can offer
+                        // one.
+                        runCatching {
+                                context.contentResolver.takePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                )
+                            }
+                            .onFailure { error = true }
+                    }
+                    onSound(uri.toString())
                 } else error = true
             }
         }
@@ -68,7 +83,15 @@ fun SoundSettings(soundUri: String?, onSound: (String?) -> Unit) {
         TextButton(onClick = { pick(RingtoneManager.TYPE_NOTIFICATION) }) {
             Text("Choose notification tone")
         }
-        if (soundUri != null) TextButton(onClick = { onSound(null) }) { Text("Use app default") }
+        if (soundUri != null)
+            TextButton(
+                onClick = {
+                    onSound(null)
+                    error = false
+                }
+            ) {
+                Text("Use app default")
+            }
         if (error)
             Text(
                 "Could not select a tone. Try another sound picker or use the app default.",

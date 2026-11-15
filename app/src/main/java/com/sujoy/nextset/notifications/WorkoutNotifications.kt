@@ -4,8 +4,10 @@ import android.app.*
 import android.content.*
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.RingtoneManager
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
@@ -13,8 +15,11 @@ import com.sujoy.nextset.MainActivity
 import com.sujoy.nextset.R
 import com.sujoy.nextset.data.AlertMode
 import com.sujoy.nextset.data.SettingsRepository
+import java.io.IOException
 import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 class WorkoutNotifications(private val context: Context, private val settings: SettingsRepository) {
     private val manager = context.getSystemService(NotificationManager::class.java)
@@ -73,6 +78,25 @@ class WorkoutNotifications(private val context: Context, private val settings: S
         return id
     }
 
+    /** A picked media tone can be deleted or lose access after reboot. Keep alerts usable. */
+    private suspend fun readableSound(selected: String?): String? =
+        withContext(Dispatchers.IO) {
+            if (selected == null) return@withContext null
+            // Android resolves default tones through its own service, including protected files.
+            if (RingtoneManager.isDefault(selected.toUri())) return@withContext selected
+            try {
+                context.contentResolver.openAssetFileDescriptor(selected.toUri(), "r")?.use {
+                    selected
+                }
+            } catch (e: IOException) {
+                Log.w("NextSet", "Selected tone is unavailable; using the app default", e)
+                null
+            } catch (e: SecurityException) {
+                Log.w("NextSet", "Selected tone is inaccessible; using the app default", e)
+                null
+            }
+        }
+
     private fun sound(rest: Boolean, selectedSound: String?) =
         selectedSound?.toUri() ?: if (rest) restSound else Settings.System.DEFAULT_NOTIFICATION_URI
 
@@ -111,8 +135,9 @@ class WorkoutNotifications(private val context: Context, private val settings: S
         if (!canNotify()) return
         val prefs = settings.settings.first()
         val mode = prefs.alertMode
-        val channel = channel(rest = true, mode, prefs.soundUri)
+        val selectedSound = if (mode.sound) readableSound(prefs.soundUri) else null
         try {
+            val channel = channel(rest = true, mode, selectedSound)
             manager.notify(
                 "rest:$id:$revision",
                 REST_ID,
@@ -122,7 +147,7 @@ class WorkoutNotifications(private val context: Context, private val settings: S
                     .setContentText("Hold to acknowledge your next set in NextSet.")
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setCategory(NotificationCompat.CATEGORY_REMINDER)
-                    .alert(rest = true, mode, prefs.soundUri)
+                    .alert(rest = true, mode, selectedSound)
                     .setOnlyAlertOnce(true)
                     .setContentIntent(launch(id))
                     .setAutoCancel(true)
@@ -141,8 +166,9 @@ class WorkoutNotifications(private val context: Context, private val settings: S
         if (!canNotify()) return
         val prefs = settings.settings.first()
         val mode = prefs.alertMode
-        val channel = channel(rest = false, mode, prefs.soundUri)
+        val selectedSound = if (mode.sound) readableSound(prefs.soundUri) else null
         try {
+            val channel = channel(rest = false, mode, selectedSound)
             manager.notify(
                 "day:$date",
                 DAILY_ID,
@@ -153,7 +179,7 @@ class WorkoutNotifications(private val context: Context, private val settings: S
                     .setContentIntent(launch())
                     .setAutoCancel(true)
                     .setOnlyAlertOnce(true)
-                    .alert(rest = false, mode, prefs.soundUri)
+                    .alert(rest = false, mode, selectedSound)
                     .build(),
             )
         } catch (_: SecurityException) {}

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,10 +26,13 @@ fun ScheduleScreen(
     onCreate: () -> Unit,
     onRoutine: (RoutinePlan) -> Unit,
 ) {
-    var editing by remember { mutableStateOf<DayOfWeek?>(null) }
-    var sequenceIndex by remember { mutableStateOf<Int?>(null) }
+    var editingDay by rememberSaveable { mutableStateOf<Int?>(null) }
+    val editing = editingDay?.let(DayOfWeek::of)
+    var sequenceIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val plan = state.settings.routine
     val context = LocalContext.current
+    var changingDate by rememberSaveable { mutableStateOf(false) }
+    var draftDate by rememberSaveable { mutableStateOf<String?>(null) }
     val first = WeekFields.of(Locale.getDefault()).firstDayOfWeek
     LazyColumn(
         contentPadding = PaddingValues(24.dp),
@@ -42,7 +46,7 @@ fun ScheduleScreen(
             )
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = plan.mode == PlanMode.WEEKDAYS,
                     onClick = { onRoutine(plan.copy(mode = PlanMode.WEEKDAYS)) },
@@ -67,22 +71,8 @@ fun ScheduleScreen(
                     )
                     TextButton(
                         onClick = {
-                            android.app
-                                .DatePickerDialog(
-                                    context,
-                                    { _, year, month, day ->
-                                        onRoutine(
-                                            plan.copy(
-                                                startDate =
-                                                    java.time.LocalDate.of(year, month + 1, day)
-                                            )
-                                        )
-                                    },
-                                    plan.startDate.year,
-                                    plan.startDate.monthValue - 1,
-                                    plan.startDate.dayOfMonth,
-                                )
-                                .show()
+                            draftDate = plan.startDate.toString()
+                            changingDate = true
                         }
                     ) {
                         Text("Change start date")
@@ -149,7 +139,7 @@ fun ScheduleScreen(
                     val today = day == state.today.dayOfWeek
                     val template = state.templates.find { it.id == state.schedule[day] }
                     OutlinedCard(
-                        onClick = { editing = day },
+                        onClick = { editingDay = day.value },
                         colors =
                             CardDefaults.outlinedCardColors(
                                 containerColor =
@@ -187,6 +177,38 @@ fun ScheduleScreen(
                 }
             }
     }
+    if (changingDate) {
+        DisposableEffect(context) {
+            val initial = draftDate?.let(java.time.LocalDate::parse) ?: plan.startDate
+            val dialog =
+                object :
+                    android.app.DatePickerDialog(
+                        context,
+                        { _, year, month, day ->
+                            onRoutine(
+                                plan.copy(startDate = java.time.LocalDate.of(year, month + 1, day))
+                            )
+                            changingDate = false
+                        },
+                        initial.year,
+                        initial.monthValue - 1,
+                        initial.dayOfMonth,
+                    ) {
+                    override fun onDateChanged(
+                        view: android.widget.DatePicker,
+                        year: Int,
+                        month: Int,
+                        day: Int,
+                    ) {
+                        super.onDateChanged(view, year, month, day)
+                        draftDate = java.time.LocalDate.of(year, month + 1, day).toString()
+                    }
+                }
+            dialog.setOnCancelListener { changingDate = false }
+            dialog.show()
+            onDispose { dialog.dismiss() }
+        }
+    }
     sequenceIndex?.let { index ->
         AlertDialog(
             onDismissRequest = { sequenceIndex = null },
@@ -219,7 +241,7 @@ fun ScheduleScreen(
     }
     editing?.let { day ->
         AlertDialog(
-            onDismissRequest = { editing = null },
+            onDismissRequest = { editingDay = null },
             title = { Text(day.getDisplayName(TextStyle.FULL, Locale.getDefault())) },
             text = {
                 LazyColumn {
@@ -227,7 +249,7 @@ fun ScheduleScreen(
                         TextButton(
                             onClick = {
                                 onAssign(day, null)
-                                editing = null
+                                editingDay = null
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -239,7 +261,7 @@ fun ScheduleScreen(
                             TextButton(
                                 onClick = {
                                     onAssign(day, template.id)
-                                    editing = null
+                                    editingDay = null
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -250,7 +272,7 @@ fun ScheduleScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { editing = null }) {
+                TextButton(onClick = { editingDay = null }) {
                     Text(stringResource(R.string.ui_cancel))
                 }
             },

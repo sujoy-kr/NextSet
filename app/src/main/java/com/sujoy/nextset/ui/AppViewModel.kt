@@ -6,6 +6,7 @@ import com.sujoy.nextset.data.*
 import com.sujoy.nextset.domain.*
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -20,6 +21,7 @@ data class AppState(
     val today: LocalDate = LocalDate.now(),
     val loading: Boolean = true,
     val error: String? = null,
+    val zone: ZoneId = ZoneId.systemDefault(),
 )
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
