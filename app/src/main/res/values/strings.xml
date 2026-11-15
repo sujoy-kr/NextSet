@@ -46,7 +46,7 @@
     <string name="ui_sessions_completed">Sessions completed</string>
     <string name="ui_offline_on_your_terms">OFFLINE. ON YOUR TERMS.</string>
     <string name="ui_choose_your_workout">Choose your workout</string>
-    <string name="ui_train_today_s_plan_or_pick_any_saved_workout_your_weekly_schedule">Train today’s plan or pick any saved workout. Your weekly schedule stays the same.</string>
+    <string name="ui_train_today_s_plan_or_pick_any_saved_workout_your_weekly_schedule">Train today’s plan or pick any saved workout. Choosing a workout keeps your plan unchanged.</string>
     <string name="ui_today_s_plan">TODAY’S PLAN</string>
     <string name="ui_create_a_workout_to_assign">Create a workout to assign</string>
     <string name="ui_rest_day">Rest day</string>

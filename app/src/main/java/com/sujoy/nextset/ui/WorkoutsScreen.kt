@@ -22,6 +22,7 @@ fun WorkoutsScreen(
     onDelete: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
     onPrepare: (String) -> Unit,
+    secondsPerSet: Int = 45,
 ) {
     var deletion by remember { mutableStateOf<WorkoutTemplate?>(null) }
     LazyColumn(
@@ -51,7 +52,7 @@ fun WorkoutsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(template.name, style = MaterialTheme.typography.titleLarge)
                             Text(
-                                workoutSummary(template),
+                                workoutSummary(template, secondsPerSet),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

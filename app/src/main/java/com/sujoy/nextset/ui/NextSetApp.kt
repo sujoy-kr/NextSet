@@ -187,14 +187,26 @@ fun NextSetApp(application: NextSetApplication) {
                                 vm::delete,
                                 vm::reorder,
                                 { nav.navigate("prepare/$it") },
+                                secondsPerSet = state.settings.secondsPerSet,
                             )
                         }
                         composable("schedule") {
-                            ScheduleScreen(state, vm::assign, { nav.navigate("edit/new") })
+                            ScheduleScreen(
+                                state,
+                                vm::assign,
+                                { nav.navigate("edit/new") },
+                                vm::routine,
+                            )
                         }
-                        composable("history") { HistoryScreen(state.sessions) }
+                        composable("history") { HistoryScreen(state.sessions, state) }
                         composable("settings") {
-                            SettingsScreen(state.settings, vm::theme, vm::defaultRest) {
+                            SettingsScreen(
+                                state.settings,
+                                vm::theme,
+                                vm::defaultRest,
+                                vm::secondsPerSet,
+                                vm::sound,
+                            ) {
                                 ReminderSettings(
                                     state.settings,
                                     state.sessions,
@@ -253,6 +265,7 @@ fun NextSetApp(application: NextSetApplication) {
                                         }
                                     }
                                 },
+                                secondsPerSet = state.settings.secondsPerSet,
                             )
                         }
                         composable("session/{id}") { entry ->

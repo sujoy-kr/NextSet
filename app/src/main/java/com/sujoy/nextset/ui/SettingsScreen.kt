@@ -15,6 +15,8 @@ fun SettingsScreen(
     settings: UserSettings,
     onTheme: (ThemeMode) -> Unit,
     onRest: (Int) -> Unit,
+    onSetTime: (Int) -> Unit,
+    onSound: (String?) -> Unit,
     notifications: @Composable () -> Unit = {},
 ) {
     LazyColumn(
@@ -53,6 +55,20 @@ fun SettingsScreen(
             }
         }
         item { notifications() }
+        item { SoundSettings(settings.soundUri, onSound) }
+        item {
+            Text("Workout duration estimates", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Estimates add every saved rest to this time for each set. Actual workout time can vary."
+            )
+            RestSetting(
+                "Time per set",
+                settings.secondsPerSet,
+                minimumSeconds = 1,
+                onChange = onSetTime,
+            )
+            Text("Use at least 1 second per set.", style = MaterialTheme.typography.bodySmall)
+        }
         item {
             HorizontalDivider()
             Spacer(Modifier.height(20.dp))
@@ -67,7 +83,7 @@ fun SettingsScreen(
                 modifier = Modifier.padding(vertical = 8.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            RestSetting("Default rest", settings.defaultRest, onRest)
+            RestSetting("Default rest", settings.defaultRest, onChange = onRest)
         }
         item {
             HorizontalDivider()

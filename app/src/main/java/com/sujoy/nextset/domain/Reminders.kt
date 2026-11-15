@@ -54,11 +54,12 @@ object ReminderPolicy {
         minute: Int,
         sessions: List<WorkoutSession>,
         delivered: Set<LocalDate>,
+        workoutOn: (LocalDate) -> String? = { assignments[it.dayOfWeek] },
     ): Boolean {
         val due = date.atTime(minute / 60, minute % 60).atZone(now.zone)
         return date == now.toLocalDate() &&
             !now.isBefore(due) &&
-            assignments[date.dayOfWeek] == templateId &&
+            workoutOn(date) == templateId &&
             date !in delivered &&
             sessions.none { it.status == SessionStatus.ACTIVE } &&
             !completedToday(sessions, templateId, date, now.zone)
@@ -70,11 +71,16 @@ object ReminderPolicy {
         minute: Int,
         sessions: List<WorkoutSession>,
         delivered: Set<LocalDate>,
+        lookAheadDays: Int = 7,
+        notBefore: LocalDate = now.toLocalDate(),
+        workoutOn: (LocalDate) -> String? = { assignments[it.dayOfWeek] },
     ): Pair<ZonedDateTime, String>? {
         require(minute in 0..1439)
-        return (0L..7L).firstNotNullOfOrNull { offset ->
-            val date = now.toLocalDate().plusDays(offset)
-            val id = assignments[date.dayOfWeek]
+        require(lookAheadDays >= 0)
+        val firstDate = maxOf(now.toLocalDate(), notBefore)
+        return (0L..lookAheadDays.toLong()).firstNotNullOfOrNull { offset ->
+            val date = firstDate.plusDays(offset)
+            val id = workoutOn(date)
             // atZone resolves DST gaps forward and chooses the first occurrence in overlaps.
             val time = date.atTime(minute / 60, minute % 60).atZone(now.zone)
             if (

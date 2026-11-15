@@ -13,6 +13,7 @@ import com.sujoy.nextset.MainActivity
 import com.sujoy.nextset.R
 import com.sujoy.nextset.data.AlertMode
 import com.sujoy.nextset.data.SettingsRepository
+import java.security.MessageDigest
 import kotlinx.coroutines.flow.first
 
 class WorkoutNotifications(private val context: Context, private val settings: SettingsRepository) {
@@ -21,10 +22,17 @@ class WorkoutNotifications(private val context: Context, private val settings: S
     private val restSound = "android.resource://${context.packageName}/raw/rest_complete".toUri()
 
     // Channel sound/vibration cannot be changed after creation. Reuse a stable channel per
-    // alert mode so changing the app preference works while preserving Android overrides.
-    private fun channel(rest: Boolean, mode: AlertMode): String {
+    // alert mode and selected tone so preference changes work while preserving Android overrides.
+    private fun channel(rest: Boolean, mode: AlertMode, selectedSound: String?): String {
+        val soundKey =
+            selectedSound?.let { uri ->
+                MessageDigest.getInstance("SHA-256")
+                    .digest(uri.toByteArray(Charsets.UTF_8))
+                    .joinToString("") { "%02x".format(it) }
+            }
         val id =
-            "${if (rest) REST_CHANNEL else DAILY_CHANNEL}_${mode.name.lowercase(java.util.Locale.ROOT)}"
+            "${if (rest) REST_CHANNEL else DAILY_CHANNEL}_${mode.name.lowercase(java.util.Locale.ROOT)}" +
+                (soundKey?.let { "_$it" } ?: "")
         if (Build.VERSION.SDK_INT >= 26) {
             val title = if (rest) "Rest complete" else "Workout reminders"
             val modeLabel =
@@ -47,7 +55,7 @@ class WorkoutNotifications(private val context: Context, private val settings: S
                             if (rest) "Alerts when your workout rest timer finishes"
                             else "Reminders on scheduled training days"
                         setSound(
-                            if (mode.sound) sound(rest) else null,
+                            if (mode.sound) sound(rest, selectedSound) else null,
                             AudioAttributes.Builder()
                                 .setUsage(
                                     if (mode == AlertMode.DEVICE) AudioAttributes.USAGE_NOTIFICATION
@@ -65,15 +73,19 @@ class WorkoutNotifications(private val context: Context, private val settings: S
         return id
     }
 
-    private fun sound(rest: Boolean) =
-        if (rest) restSound else Settings.System.DEFAULT_NOTIFICATION_URI
+    private fun sound(rest: Boolean, selectedSound: String?) =
+        selectedSound?.toUri() ?: if (rest) restSound else Settings.System.DEFAULT_NOTIFICATION_URI
 
     @Suppress("DEPRECATION")
-    private fun NotificationCompat.Builder.alert(rest: Boolean, mode: AlertMode) = apply {
+    private fun NotificationCompat.Builder.alert(
+        rest: Boolean,
+        mode: AlertMode,
+        selectedSound: String?,
+    ) = apply {
         // Android 7 uses the notification itself rather than a channel.
         if (Build.VERSION.SDK_INT < 26) {
             setSound(
-                if (mode.sound) sound(rest) else null,
+                if (mode.sound) sound(rest, selectedSound) else null,
                 if (mode == AlertMode.DEVICE) AudioManager.STREAM_NOTIFICATION
                 else AudioManager.STREAM_ALARM,
             )
@@ -97,8 +109,9 @@ class WorkoutNotifications(private val context: Context, private val settings: S
 
     suspend fun rest(id: String, revision: Long) {
         if (!canNotify()) return
-        val mode = settings.settings.first().alertMode
-        val channel = channel(rest = true, mode)
+        val prefs = settings.settings.first()
+        val mode = prefs.alertMode
+        val channel = channel(rest = true, mode, prefs.soundUri)
         try {
             manager.notify(
                 "rest:$id:$revision",
@@ -109,7 +122,7 @@ class WorkoutNotifications(private val context: Context, private val settings: S
                     .setContentText("Hold to acknowledge your next set in NextSet.")
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setCategory(NotificationCompat.CATEGORY_REMINDER)
-                    .alert(rest = true, mode)
+                    .alert(rest = true, mode, prefs.soundUri)
                     .setOnlyAlertOnce(true)
                     .setContentIntent(launch(id))
                     .setAutoCancel(true)
@@ -126,8 +139,9 @@ class WorkoutNotifications(private val context: Context, private val settings: S
 
     suspend fun reminder(name: String, date: String) {
         if (!canNotify()) return
-        val mode = settings.settings.first().alertMode
-        val channel = channel(rest = false, mode)
+        val prefs = settings.settings.first()
+        val mode = prefs.alertMode
+        val channel = channel(rest = false, mode, prefs.soundUri)
         try {
             manager.notify(
                 "day:$date",
@@ -139,7 +153,7 @@ class WorkoutNotifications(private val context: Context, private val settings: S
                     .setContentIntent(launch())
                     .setAutoCancel(true)
                     .setOnlyAlertOnce(true)
-                    .alert(rest = false, mode)
+                    .alert(rest = false, mode, prefs.soundUri)
                     .build(),
             )
         } catch (_: SecurityException) {}

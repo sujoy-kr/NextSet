@@ -9,7 +9,10 @@ Android **7.0+ (API 24)** · Kotlin · Jetpack Compose · Material 3 · Room · 
 - Unlimited workout templates with editing, duplication, deletion and accessible reorder controls.
 - Exercises with individual set counts and rest overrides, including the final set and zero rest. No weight or rep forms.
 - Supersets with two or more movements, unequal set counts, and separate movement, round and post-group rest defaults.
-- A repeating weekly schedule, today's assignment and clear rest days. Start any saved workout without shifting the plan.
+- Choose fixed weekdays or a repeating daily workout/rest sequence (such as push → pull → rest) that continues across week boundaries. Start any saved workout without shifting the plan.
+- Workout summaries show exercise/set totals and estimated duration, including all configured rests plus a global time per set (45 seconds by default).
+- Weekly analysis in History compares planned and completed sets for each exercise, with previous/next week navigation.
+- Choose a device ringtone or notification tone for rest alerts and workout reminders.
 - Minimal execution: hold for one second to complete a set; a deadline-based countdown turns red and waits for acknowledgment. Pause, resume, skip rest, undo and confirmed abandonment are available.
 - Durable session recovery, immutable workout history, calendar/date browsing and actual completed-set records.
 - Optional adaptive or manual daily reminders; completed scheduled workouts and active sessions suppress reminders.
@@ -41,11 +44,11 @@ Initial dependency/toolchain downloads need internet on the development machine.
 
 1. On first launch, select **Create your first workout**. Name it, add exercises or supersets, and adjust each movement's sets.
 2. Set block rest defaults in minutes/seconds. **Customize rest for each set** overrides a default; zero skips that rest. The last set can have its own override. Use arrows to reorder blocks or superset movements, then **Save**.
-3. In **Week**, tap a weekday and choose a template or **Rest day**. Assignments repeat weekly; missed workouts never shift them.
+3. In **Week**, choose **Weekdays** to assign fixed days, or **Repeating sequence** to add and reorder workout/rest days. Set the date for day 1; each entry takes one calendar day and the sequence repeats continuously. Missed workouts never shift either plan.
 4. On **Home**, choose **Start workout**, select today's plan or any saved workout, review it, and start. Notification and precise-alarm access are optional.
 5. Hold the main surface for one second to complete a set. Short taps do nothing. When rest turns red, hold again to continue. Secondary controls offer undo, pause/resume, skip rest and end. Accessibility custom actions offer an alternative to holding.
-6. Leaving for Home preserves the session; **Resume workout** restores it. Ending saves an abandoned session. **History** shows actual training independently of the schedule.
-7. **Settings** controls appearance, new-block default rest and optional workout reminders. Choose automatic timing or set a manual local time.
+6. Leaving for Home preserves the session; **Resume workout** restores it. Ending saves an abandoned session. **History** shows actual training and **Weekly analysis**, which compares planned and completed sets per exercise. Completed counts use each set’s completion date, including sets in unfinished sessions; planned counts reflect your current templates and plan.
+7. **Settings** controls appearance, new-block default rest and optional workout reminders. Choose automatic timing or set a manual local time. Select a ringtone or notification tone and adjust **Time per set** for duration estimates. Estimates include rest after the final set; pauses and actual set durations can change the total.
 
 Specific set overrides take priority over block defaults. Within supersets, movements with no remaining sets drop out of later rounds. Configured rest after the final workout set is retained. Rest has no product-imposed maximum; storage represents non-negative Int seconds.
 

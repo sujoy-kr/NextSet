@@ -35,7 +35,22 @@ class ReminderScheduler(
                     now.zone,
                 )
         val delivered = db.execution().deliveries().map { LocalDate.parse(it.date) }.toSet()
-        val next = ReminderPolicy.next(now, workouts.schedule.first(), minute, history, delivered)
+        val assignments = workouts.schedule.first()
+        val available = workouts.templates.first().map { it.id }.toSet()
+        val next =
+            ReminderPolicy.next(
+                now,
+                assignments,
+                minute,
+                history,
+                delivered,
+                lookAheadDays = maxOf(7, prefs.routine.entries.size),
+                notBefore =
+                    if (prefs.routine.mode == PlanMode.SEQUENCE) prefs.routine.startDate
+                    else now.toLocalDate(),
+            ) {
+                prefs.routine.workoutOn(it, assignments)?.takeIf { id -> id in available }
+            }
         alarms.daily(
             next?.first?.toInstant()?.toEpochMilli(),
             next?.first?.toLocalDate()?.toString().orEmpty(),
@@ -71,6 +86,7 @@ class ReminderScheduler(
                         minute,
                         history,
                         delivered,
+                        { settingsNow.routine.workoutOn(it, assignments) },
                     )
             ) {
                 val template = workouts.templates.first().find { it.id == templateId }

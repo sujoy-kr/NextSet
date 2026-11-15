@@ -1,11 +1,16 @@
 package com.sujoy.nextset.data
 
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.sujoy.nextset.domain.*
 import java.io.IOException
+import java.time.LocalDate
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Context.settingsStore by preferencesDataStore("settings")
 
@@ -29,6 +34,9 @@ data class UserSettings(
     val reminders: Boolean = false,
     val manualReminderMinute: Int? = null,
     val alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION,
+    val secondsPerSet: Int = 45,
+    val soundUri: String? = null,
+    val routine: RoutinePlan = RoutinePlan(),
 )
 
 class SettingsRepository(context: Context) {
@@ -38,6 +46,11 @@ class SettingsRepository(context: Context) {
     private val remindersKey = booleanPreferencesKey("reminders_enabled")
     private val minuteKey = intPreferencesKey("reminder_minute")
     private val alertModeKey = stringPreferencesKey("alert_mode")
+    private val setTimeKey = intPreferencesKey("seconds_per_set")
+    private val soundKey = stringPreferencesKey("sound_uri")
+    private val routineModeKey = stringPreferencesKey("routine_mode")
+    private val routineEntriesKey = stringPreferencesKey("routine_entries")
+    private val routineStartKey = stringPreferencesKey("routine_start")
     val settings =
         store.data
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -50,8 +63,47 @@ class SettingsRepository(context: Context) {
                     it[minuteKey],
                     AlertMode.entries.find { mode -> mode.name == it[alertModeKey] }
                         ?: AlertMode.SOUND_AND_VIBRATION,
+                    secondsPerSet = (it[setTimeKey] ?: 45).coerceAtLeast(1),
+                    soundUri = it[soundKey],
+                    routine =
+                        RoutinePlan(
+                            mode =
+                                PlanMode.entries.find { mode -> mode.name == it[routineModeKey] }
+                                    ?: PlanMode.WEEKDAYS,
+                            entries =
+                                JSONArray(it[routineEntriesKey] ?: "[]").let { values ->
+                                    (0 until values.length()).map { i ->
+                                        if (values.isNull(i)) null else values.getString(i)
+                                    }
+                                },
+                            startDate =
+                                it[routineStartKey]?.let(LocalDate::parse)
+                                    ?: LocalDate.ofEpochDay(0),
+                        ),
                 )
             }
+
+    suspend fun secondsPerSet(seconds: Int) {
+        require(seconds > 0)
+        store.edit { it[setTimeKey] = seconds }
+    }
+
+    suspend fun sound(uri: String?) {
+        require(uri == null || uri.toUri().scheme in listOf("content", "android.resource"))
+        store.edit { if (uri == null) it.remove(soundKey) else it[soundKey] = uri }
+    }
+
+    suspend fun routine(plan: RoutinePlan) {
+        require(plan.entries.all { it == null || it.isNotBlank() })
+        store.edit {
+            it[routineModeKey] = plan.mode.name
+            it[routineEntriesKey] =
+                JSONArray()
+                    .apply { plan.entries.forEach { id -> put(id ?: JSONObject.NULL) } }
+                    .toString()
+            it[routineStartKey] = plan.startDate.toString()
+        }
+    }
 
     suspend fun alertMode(mode: AlertMode) {
         store.edit { it[alertModeKey] = mode.name }

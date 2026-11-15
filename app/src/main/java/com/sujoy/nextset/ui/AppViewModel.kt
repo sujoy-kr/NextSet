@@ -90,6 +90,12 @@ class AppViewModel(
 
     fun alertMode(mode: AlertMode) = action { preferences.alertMode(mode) }
 
+    fun secondsPerSet(seconds: Int) = action { preferences.secondsPerSet(seconds) }
+
+    fun sound(uri: String?) = action { preferences.sound(uri) }
+
+    fun routine(plan: RoutinePlan) = action { preferences.routine(plan) }
+
     fun reminders(enabled: Boolean) = action { preferences.reminders(enabled) }
 
     fun reminderMinute(minute: Int?) = action { preferences.reminderMinute(minute) }

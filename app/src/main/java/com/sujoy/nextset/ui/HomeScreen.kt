@@ -25,7 +25,10 @@ fun HomeScreen(
     onResume: (String) -> Unit,
 ) {
     var choose by remember { mutableStateOf(false) }
-    val today = state.templates.find { it.id == assignedToday(state.schedule, state.today) }
+    val today =
+        state.templates.find {
+            it.id == state.settings.routine.workoutOn(state.today, state.schedule)
+        }
     LazyColumn(
         contentPadding = PaddingValues(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -82,7 +85,9 @@ fun HomeScreen(
                     )
                     Text(today?.name ?: "Rest day", style = MaterialTheme.typography.headlineMedium)
                     Text(
-                        today?.let { "${workoutSummary(it)}\nMove at your own pace." }
+                        today?.let {
+                            "${workoutSummary(it, state.settings.secondsPerSet)}\nMove at your own pace."
+                        }
                             ?: "Take a breath. Recovery is part of the work. You can still choose a workout whenever you’re ready.",
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -146,7 +151,9 @@ fun HomeScreen(
                 Icon(Icons.Default.CalendarMonth, null)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "Shape your week · ${pluralStringResource(R.plurals.training_day_count,state.schedule.size,state.schedule.size)}"
+                    if (state.settings.routine.mode == PlanMode.SEQUENCE) "Edit repeating sequence"
+                    else
+                        "Shape your week · ${pluralStringResource(R.plurals.training_day_count,state.schedule.size,state.schedule.size)}"
                 )
             }
             Text(
@@ -207,7 +214,7 @@ private fun WorkoutPicker(
                                         template.name,
                                         style = MaterialTheme.typography.titleMedium,
                                     )
-                                    Text(workoutSummary(template))
+                                    Text(workoutSummary(template, state.settings.secondsPerSet))
                                 }
                             }
                         }

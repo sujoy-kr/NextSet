@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sujoy.nextset.R
+import com.sujoy.nextset.domain.estimatedSeconds
 
 @Composable
 fun PageTitle(kicker: String, title: String, subtitle: String? = null) {
@@ -107,6 +108,7 @@ fun DurationDialog(
     allowDefault: Boolean = false,
     onDismiss: () -> Unit,
     onDefault: () -> Unit = {},
+    minimumSeconds: Int = 0,
     onSave: (Int) -> Unit,
 ) {
     var minutes by rememberSaveable { mutableStateOf((current / 60).toString()) }
@@ -123,7 +125,10 @@ fun DurationDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(stringResource(R.string.rest_duration_help))
+                Text(
+                    if (minimumSeconds > 0) "Enter the estimated active time for one set."
+                    else stringResource(R.string.rest_duration_help)
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         minutes,
@@ -142,9 +147,11 @@ fun DurationDialog(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                if (total !in 0L..Int.MAX_VALUE.toLong())
+                if (total !in minimumSeconds.toLong()..Int.MAX_VALUE.toLong())
                     Text(
-                        stringResource(R.string.rest_duration_error),
+                        if (minimumSeconds > 0)
+                            "Enter a duration of at least $minimumSeconds second, with seconds between 0 and 59."
+                        else stringResource(R.string.rest_duration_error),
                         color = MaterialTheme.colorScheme.error,
                     )
                 if (allowDefault)
@@ -155,7 +162,7 @@ fun DurationDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = total in 0L..Int.MAX_VALUE.toLong(),
+                enabled = total in minimumSeconds.toLong()..Int.MAX_VALUE.toLong(),
                 onClick = { onSave(total.toInt()) },
             ) {
                 Text(stringResource(R.string.ui_apply))
@@ -168,7 +175,7 @@ fun DurationDialog(
 }
 
 @Composable
-fun RestSetting(label: String, seconds: Int, onChange: (Int) -> Unit) {
+fun RestSetting(label: String, seconds: Int, minimumSeconds: Int = 0, onChange: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }
     OutlinedButton(onClick = { open = true }) { Text("$label · ${restLabel(seconds)}") }
     if (open)
@@ -176,6 +183,7 @@ fun RestSetting(label: String, seconds: Int, onChange: (Int) -> Unit) {
             label,
             seconds,
             onDismiss = { open = false },
+            minimumSeconds = minimumSeconds,
             onSave = {
                 onChange(it)
                 open = false
@@ -184,7 +192,10 @@ fun RestSetting(label: String, seconds: Int, onChange: (Int) -> Unit) {
 }
 
 @Composable
-fun workoutSummary(workout: com.sujoy.nextset.domain.WorkoutTemplate): String =
+fun workoutSummary(
+    workout: com.sujoy.nextset.domain.WorkoutTemplate,
+    secondsPerSet: Int = 45,
+): String =
     androidx.compose.ui.res.pluralStringResource(
         R.plurals.exercise_count,
         workout.exerciseCount,
@@ -195,4 +206,5 @@ fun workoutSummary(workout: com.sujoy.nextset.domain.WorkoutTemplate): String =
             R.plurals.set_count,
             workout.totalSets,
             workout.totalSets,
-        )
+        ) +
+        " · ~${elapsedLabel(workout.estimatedSeconds(secondsPerSet) * 1000)}"

@@ -32,6 +32,7 @@ fun PrepareScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
     onStart: () -> Unit,
+    secondsPerSet: Int = 45,
 ) {
     val context = LocalContext.current
     val permission =
@@ -91,7 +92,12 @@ fun PrepareScreen(
                 }
             else {
                 item {
-                    PageTitle("Your session plan", template.name, workoutSummary(template))
+                    PageTitle(
+                        "Your session plan",
+                        template.name,
+                        workoutSummary(template, secondsPerSet),
+                    )
+                    Text("Estimate includes all saved rests and ${secondsPerSet}s per set.")
                     Text(
                         "Hold the main surface for one second to complete each set. Rest finishes with an alert and waits for your acknowledgment.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

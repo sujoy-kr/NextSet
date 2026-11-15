@@ -32,7 +32,7 @@ private fun statusLabel(status: SessionStatus) =
     }
 
 @Composable
-fun HistoryScreen(sessions: List<WorkoutSession>) {
+fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var monthValue by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var dateValue by rememberSaveable { mutableStateOf<String?>(null) }
@@ -57,6 +57,7 @@ fun HistoryScreen(sessions: List<WorkoutSession>) {
                 "Your actual training, independent of the plan.",
             )
         }
+        if (state != null) item { WeeklyAnalysis(state) }
         if (sessions.isNotEmpty())
             item {
                 HistoryCalendar(
