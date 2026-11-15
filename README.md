@@ -26,7 +26,7 @@ Actual screenshots from the running app on an Android API 37 emulator. Workout n
 
 1. Clone/download this repository and open its root folder in Android Studio.
 2. Install **Android SDK Platform 37** and **Build Tools 36.0.0** through SDK Manager. Android Studio writes your ignored `local.properties` SDK path automatically.
-3. Use the checked-in Gradle wrapper (**9.6**) and AGP **9.5.1**. The daemon configuration requests **JDK 25**, which Gradle can provision. App bytecode targets Java 17; core-library desugaring supports `java.time` on API 24–25.
+3. Use the checked-in Gradle wrapper (**9.6**) and AGP **9.5.1**. The daemon configuration requests **JetBrains JDK 21**, which Gradle can provision automatically. The vendor requirement prevents Gradle from selecting editor runtimes that lack Android build tools such as `jlink`. App bytecode targets Java 17; core-library desugaring supports `java.time` on API 24–25.
 4. Start an emulator or connect a development device with USB debugging enabled, then run:
 
 ```sh
@@ -98,7 +98,7 @@ Follow [the exact build, signing and upgrade steps](docs/RELEASE.md). Nothing is
 ## Known limitations
 
 - The interface is currently English. There is no export/import, cloud sync, history editing or reminder catch-up.
-- Notification permission, channel preferences, silent mode, Do Not Disturb, idle quotas and manufacturer battery policies may suppress/delay alerts. Grant precise-alarm access for background rest timing. Force-stopped apps must be reopened; revoking exact-alarm access can cancel alarms until the next launch.
+- Notification permission, channel preferences, alarm volume (or notification volume in Follow device settings), Do Not Disturb, idle quotas and manufacturer battery policies may suppress/delay alerts. Grant precise-alarm access for background rest timing. Force-stopped apps must be reopened; revoking exact-alarm access can cancel alarms until the next launch.
 - Pauses freeze rest timers; elapsed workout duration includes pauses/background/device-off time. Across reboot plus a clock correction, exact timing reconstruction is impossible; recovery is bounded by the saved remainder.
 - Automated device coverage uses the available API 37 emulator. API 24 hardware, physical audio/haptics, TalkBack and manufacturer power policies remain manual validation.
 - Dependencies are pinned for the tested toolchain. Lint can report newer available versions and a third-party Lifecycle lint API compatibility warning; these are documented, not hidden by a baseline.

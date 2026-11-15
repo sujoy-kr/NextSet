@@ -25,6 +25,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.sujoy.nextset.R
+import com.sujoy.nextset.data.AlertMode
 import com.sujoy.nextset.data.UserSettings
 import com.sujoy.nextset.domain.*
 import com.sujoy.nextset.notifications.AlarmScheduler
@@ -40,6 +41,7 @@ fun ReminderSettings(
     alarms: AlarmScheduler,
     onEnabled: (Boolean) -> Unit,
     onMinute: (Int?) -> Unit,
+    onAlertMode: (AlertMode) -> Unit,
 ) {
     val context = LocalContext.current
     var notificationsAllowed by remember {
@@ -119,10 +121,34 @@ fun ReminderSettings(
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            "Rest alerts use Android’s notification sound and vibration settings. Silent mode, Do Not Disturb, notification channels and system restrictions are respected.",
+            "Choose how rest timers and workout reminders alert you. Sound uses alarm volume and plays even in vibrate mode. Follow device settings uses notification volume instead. Do Not Disturb and Android notification settings still apply.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
         )
+        AlertMode.entries.forEach { mode ->
+            val label =
+                when (mode) {
+                    AlertMode.SOUND_AND_VIBRATION -> "Sound and vibration (default)"
+                    AlertMode.SOUND -> "Sound only"
+                    AlertMode.VIBRATION -> "Vibration only"
+                    AlertMode.SILENT -> "Silent"
+                    AlertMode.DEVICE -> "Follow device settings"
+                }
+            Surface(
+                onClick = { onAlertMode(mode) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = settings.alertMode == mode,
+                        onClick = null,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                    Text(label, Modifier.padding(vertical = 12.dp))
+                }
+            }
+        }
         if (!notificationsAllowed)
             Text(
                 "Notifications are currently blocked. Rest still turns red on screen; background sound and notifications require permission.",

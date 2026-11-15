@@ -1,5 +1,8 @@
 package com.sujoy.nextset.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -122,7 +125,9 @@ fun NextSetApp(application: NextSetApplication) {
                                             saveState = true
                                         }
                                         launchSingleTop = true
-                                        restoreState = true
+                                        // Home is the root. Restoring its saved stack can reopen
+                                        // a page entered through a Home shortcut, such as Week.
+                                        restoreState = tab.route != "home"
                                     }
                                 },
                                 icon = { Icon(tab.icon, null) },
@@ -156,6 +161,10 @@ fun NextSetApp(application: NextSetApplication) {
                     NavHost(
                         nav,
                         startDestination = "home",
+                        enterTransition = { fadeIn(tween(120)) },
+                        exitTransition = { fadeOut(tween(120)) },
+                        popEnterTransition = { fadeIn(tween(120)) },
+                        popExitTransition = { fadeOut(tween(120)) },
                         modifier =
                             (if (route == "session/{id}") Modifier
                                 else Modifier.widthIn(max = 840.dp))
@@ -192,6 +201,7 @@ fun NextSetApp(application: NextSetApplication) {
                                     application.alarms,
                                     vm::reminders,
                                     vm::reminderMinute,
+                                    vm::alertMode,
                                 )
                             }
                         }

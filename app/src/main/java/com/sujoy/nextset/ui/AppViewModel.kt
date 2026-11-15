@@ -88,6 +88,8 @@ class AppViewModel(
 
     fun defaultRest(seconds: Int) = action { preferences.rest(seconds) }
 
+    fun alertMode(mode: AlertMode) = action { preferences.alertMode(mode) }
+
     fun reminders(enabled: Boolean) = action { preferences.reminders(enabled) }
 
     fun reminderMinute(minute: Int?) = action { preferences.reminderMinute(minute) }

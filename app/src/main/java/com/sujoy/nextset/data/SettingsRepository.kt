@@ -15,11 +15,20 @@ enum class ThemeMode {
     DARK,
 }
 
+enum class AlertMode(val sound: Boolean, val vibrate: Boolean) {
+    SOUND_AND_VIBRATION(true, true),
+    SOUND(true, false),
+    VIBRATION(false, true),
+    SILENT(false, false),
+    DEVICE(true, true),
+}
+
 data class UserSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val defaultRest: Int = 90,
     val reminders: Boolean = false,
     val manualReminderMinute: Int? = null,
+    val alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION,
 )
 
 class SettingsRepository(context: Context) {
@@ -28,6 +37,7 @@ class SettingsRepository(context: Context) {
     private val restKey = intPreferencesKey("rest_seconds")
     private val remindersKey = booleanPreferencesKey("reminders_enabled")
     private val minuteKey = intPreferencesKey("reminder_minute")
+    private val alertModeKey = stringPreferencesKey("alert_mode")
     val settings =
         store.data
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -38,8 +48,14 @@ class SettingsRepository(context: Context) {
                     it[restKey] ?: 90,
                     it[remindersKey] ?: false,
                     it[minuteKey],
+                    AlertMode.entries.find { mode -> mode.name == it[alertModeKey] }
+                        ?: AlertMode.SOUND_AND_VIBRATION,
                 )
             }
+
+    suspend fun alertMode(mode: AlertMode) {
+        store.edit { it[alertModeKey] = mode.name }
+    }
 
     suspend fun theme(mode: ThemeMode) {
         store.edit { it[themeKey] = mode.name }

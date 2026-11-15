@@ -22,7 +22,7 @@ class NextSetApplication : Application() {
     val settings by lazy { SettingsRepository(this) }
     val execution by lazy { ExecutionStore(database) }
     val alarms by lazy { AlarmScheduler(this) }
-    val notifications by lazy { WorkoutNotifications(this) }
+    val notifications by lazy { WorkoutNotifications(this, settings) }
     val runtime by lazy { SessionRuntime(execution, alarms, notifications, AndroidClock(this)) }
     val reminders by lazy {
         ReminderScheduler(database, workouts, sessions, settings, alarms, notifications)

@@ -32,6 +32,47 @@ class NavigationTest {
     }
 
     @Test
+    fun shapeYourWeekReturnsHomeWithoutBackAndSurvivesRepeatedTabSwitches() {
+        repeat(2) {
+            compose
+                .onNodeWithText("Shape your week", substring = true)
+                .performScrollTo()
+                .performClick()
+            compose.onNodeWithText("A steady rhythm").assertIsDisplayed()
+            compose.onNodeWithText("Home", useUnmergedTree = true).performClick()
+            compose.onNode(hasScrollAction()).performScrollToNode(hasText("Your next set."))
+            compose.onNodeWithText("Your next set.").assertIsDisplayed()
+            compose.onNodeWithText("Week", useUnmergedTree = true).performClick()
+            compose.onNodeWithText("A steady rhythm").assertIsDisplayed()
+            compose.onNodeWithText("Home", useUnmergedTree = true).performClick()
+            compose.onNode(hasScrollAction()).performScrollToNode(hasText("Your next set."))
+            compose.onNodeWithText("Your next set.").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun alertChoicePersistsAcrossRecreation() {
+        val app = compose.activity.application as NextSetApplication
+        val previous = runBlocking { app.settings.settings.first().alertMode }
+        try {
+            compose.onNodeWithContentDescription("Settings").performClick()
+            compose.onNodeWithText("Vibration only").performScrollTo().performClick()
+            compose.waitUntil(5_000) {
+                runBlocking { app.settings.settings.first().alertMode } ==
+                    com.sujoy.nextset.data.AlertMode.VIBRATION
+            }
+            compose.activityRule.scenario.recreate()
+            compose.onNodeWithText("Vibration only").performScrollTo().assertIsDisplayed()
+            assertEquals(
+                com.sujoy.nextset.data.AlertMode.VIBRATION,
+                runBlocking { app.settings.settings.first().alertMode },
+            )
+        } finally {
+            runBlocking { app.settings.alertMode(previous) }
+        }
+    }
+
+    @Test
     fun createAssignAndPreparePersistsAcrossRecreation() {
         val historyBefore = runBlocking {
             (compose.activity.application as NextSetApplication).sessions.sessions.first().size
