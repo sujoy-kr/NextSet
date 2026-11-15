@@ -1,0 +1,40 @@
+# Android Studio and local SDK/tool state
+.idea/
+*.iml
+.gradle/
+.kotlin/
+local.properties
+.externalNativeBuild/
+.cxx/
+captures/
+
+# Generated output
+**/build/
+*.apk
+*.aab
+*.apks
+*.hprof
+
+# Signing credentials and machine-local configuration
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+.env
+.env.*
+
+# OS/editor and task-runner artifacts
+.DS_Store
+Thumbs.db
+*.swp
+.nextset-runner/
+__pycache__/
+*.pyc
+/script.py
+
+# Local workout data extracted during development
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
