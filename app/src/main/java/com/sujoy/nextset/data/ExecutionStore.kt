@@ -138,12 +138,22 @@ class ExecutionStore(private val db: NextSetDatabase) {
         val completed = db.sessions().session(row.id)!!.sets.map { it.stepIndex }.toSet()
         val plan = snapshot.sequence()
         val next = plan.indices.firstOrNull { plan[it] is WorkoutStep.Set && it !in completed }
+        val status = SessionStatus.valueOf(row.status)
         val state =
             ExecutionMachine.start(row.id, now)
                 .copy(
-                    index = next ?: plan.lastIndex,
-                    phase = Phase.PAUSED,
+                    index = if (status == SessionStatus.ACTIVE) next ?: plan.lastIndex else plan.size,
+                    phase =
+                        when (status) {
+                            SessionStatus.ACTIVE -> Phase.PAUSED
+                            SessionStatus.COMPLETED -> Phase.COMPLETED
+                            SessionStatus.ABANDONED -> Phase.ABANDONED
+                        },
                     pausedFrom = if (next != null) Phase.EXERCISE else Phase.REST_DONE,
+                    // Legacy sessions have no monotonic anchor; retain their wall-time duration.
+                    elapsed =
+                        row.elapsedMillis
+                            ?: ((row.endedAt ?: now.wall) - row.startedAt).coerceAtLeast(0),
                 )
         save(state)
         return state

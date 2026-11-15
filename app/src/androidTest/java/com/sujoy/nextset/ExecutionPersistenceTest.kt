@@ -222,6 +222,45 @@ class ExecutionPersistenceTest {
     }
 
     @Test
+    fun legacyActiveSessionRetainsElapsedTimeWhenCheckpointIsCreated() = runBlocking {
+        val template = template()
+        workouts.save(template)
+        val sessions = LocalSessionRepository(db)
+        val id = sessions.begin(template.id, now.wall)
+        sessions.recordSet(id, 0, clock(1_000).wall)
+
+        val recovered = store.active(clock(60_000))!!
+        assertEquals(Phase.PAUSED, recovered.phase)
+        assertEquals(2, recovered.index)
+        assertEquals(60_000L, recovered.elapsed)
+
+        store.command(id, recovered.revision, Command.END, clock(65_000))
+        assertEquals(65_000L, sessions.sessions.first().single().elapsedMillis)
+    }
+
+    @Test
+    fun legacyEndedSessionsStayTerminalAndTheirSetsRemainImmutable() = runBlocking {
+        val template = template()
+        workouts.save(template)
+        val sessions = LocalSessionRepository(db)
+        for (completed in listOf(false, true)) {
+            val id = sessions.begin(template.id, now.wall)
+            sessions.recordSet(id, 0, clock(1_000).wall)
+            if (completed) sessions.recordSet(id, 2, clock(2_000).wall)
+            sessions.finish(id, completed, clock(3_000).wall)
+            val original = sessions.sessions.first().first { it.id == id }
+
+            val recovered = store.command(id, null, Command.RESUME, clock(60_000))
+            assertEquals(if (completed) Phase.COMPLETED else Phase.ABANDONED, recovered.phase)
+            assertEquals(3_000L, recovered.elapsed)
+            for (command in listOf(Command.UNDO, Command.HOLD, Command.END)) {
+                assertEquals(recovered, store.command(id, null, command, clock(65_000)))
+            }
+            assertEquals(original, sessions.sessions.first().first { it.id == id })
+        }
+    }
+
+    @Test
     fun legacyRepositoryCannotDesynchronizeExecutionCheckpoint() = runBlocking {
         val t = template()
         workouts.save(t)
