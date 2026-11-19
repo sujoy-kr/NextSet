@@ -207,6 +207,9 @@ fun workoutSummary(
             workout.totalSets,
             workout.totalSets,
         ) +
-        workout.expectedDuration(sessions).let {
-            " · ~${elapsedLabel(it.seconds * 1000)}" + if (it.fromHistory) " avg" else ""
-        }
+        // Drafts being edited may be invalid (e.g. unnamed), and sequence() rejects those.
+        if (workout.validationError() != null) ""
+        else
+            workout.expectedDuration(sessions).let {
+                " · ~${elapsedLabel(it.seconds * 1000)}" + if (it.fromHistory) " avg" else ""
+            }
