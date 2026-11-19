@@ -34,12 +34,19 @@ import androidx.lifecycle.*
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sujoy.nextset.R
+import com.sujoy.nextset.data.AdvanceMode
+import com.sujoy.nextset.data.UserSettings
 import com.sujoy.nextset.domain.*
 import com.sujoy.nextset.notifications.SessionRuntime
 import kotlinx.coroutines.delay
 
 @Composable
-fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () -> Unit) {
+fun ExecutionScreen(
+    vm: ExecutionViewModel,
+    runtime: SessionRuntime,
+    settings: UserSettings = UserSettings(),
+    onHome: () -> Unit,
+) {
     val ui by vm.state.collectAsStateWithLifecycle()
     val owner = LocalLifecycleOwner.current
     val view = LocalView.current
@@ -128,6 +135,8 @@ fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () 
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 perform(Command.HOLD)
             }
+            val advance = if (state.phase == Phase.EXERCISE) settings.setAdvance else settings.restAdvance
+            val tapToAdvance = advance == AdvanceMode.TAP
             Column(Modifier.padding(padding).fillMaxSize()) {
                 Text(
                     workout.session.snapshot.name,
@@ -143,7 +152,12 @@ fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () 
                         .then(
                             if (state.phase == Phase.EXERCISE || state.phase == Phase.REST_DONE)
                                 Modifier.testTag("workout_surface")
-                                    .oneSecondHold(state.revision, { pressing = it }, onHold)
+                                    .advanceGesture(
+                                        state.revision,
+                                        tapToAdvance,
+                                        { pressing = it },
+                                        onHold,
+                                    )
                                     .semantics(mergeDescendants = true) {
                                         role = Role.Button
                                         onLongClick(label = "Complete set or acknowledge rest") {
@@ -194,7 +208,8 @@ fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () 
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                                 Text(
-                                    "Hold anywhere for 1 second\nto complete this set",
+                                    if (tapToAdvance) "Tap anywhere\nto complete this set"
+                                    else "Hold anywhere for 1 second\nto complete this set",
                                     textAlign = TextAlign.Center,
                                     color = foreground.copy(alpha = .75f),
                                 )
@@ -216,7 +231,8 @@ fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () 
                                 )
                                 if (state.phase == Phase.REST_DONE)
                                     Text(
-                                        "Hold for 1 second to continue",
+                                        if (tapToAdvance) "Tap to continue"
+                                        else "Hold for 1 second to continue",
                                         textAlign = TextAlign.Center,
                                     )
                             }
@@ -339,6 +355,27 @@ fun ExecutionScreen(vm: ExecutionViewModel, runtime: SessionRuntime, onHome: () 
             },
         )
 }
+
+private fun Modifier.advanceGesture(
+    revision: Long,
+    tap: Boolean,
+    onPress: (Boolean) -> Unit,
+    onHold: () -> Unit,
+): Modifier =
+    if (!tap) oneSecondHold(revision, onPress, onHold)
+    else
+        pointerInput(revision) {
+            awaitEachGesture {
+                val down = awaitFirstDown()
+                down.consume()
+                // Completes on a clean release, so a cancelled or dragged touch does nothing.
+                val up = waitForUpOrCancellation()
+                if (up != null) {
+                    up.consume()
+                    onHold()
+                }
+            }
+        }
 
 private fun Modifier.oneSecondHold(
     revision: Long,

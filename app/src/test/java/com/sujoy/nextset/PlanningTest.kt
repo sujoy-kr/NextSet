@@ -72,6 +72,57 @@ class PlanningTest {
     }
 
     @Test
+    fun expectedDurationUsesEstimateUntilCompletedHistoryExists() {
+        val workout =
+            WorkoutTemplate(
+                id = "w",
+                name = "W",
+                blocks = listOf(WorkoutBlock(exercises = listOf(Exercise(name = "A", rests = listOf(10))))),
+            )
+        fun session(id: String, template: WorkoutTemplate, status: SessionStatus, ms: Long) =
+            WorkoutSession(id, template, 0, ms, status, emptyList(), ms)
+        assertEquals(DurationExpectation(55, false), workout.expectedDuration(emptyList()))
+        val history =
+            listOf(
+                session("1", workout, SessionStatus.COMPLETED, 600_000),
+                session("2", workout, SessionStatus.COMPLETED, 1_200_000),
+                session("3", workout, SessionStatus.ABANDONED, 5_000),
+                session("4", workout.copy(id = "other"), SessionStatus.COMPLETED, 9_000_000),
+            )
+        assertEquals(DurationExpectation(900, true), workout.expectedDuration(history))
+    }
+
+    @Test
+    fun timelineSplitsSetAndRestTimeAndFlagsLegacySessions() {
+        val workout =
+            WorkoutTemplate(
+                id = "w",
+                name = "W",
+                blocks =
+                    listOf(
+                        WorkoutBlock(exercises = listOf(Exercise(name = "A", rests = listOf(120, 60))))
+                    ),
+            )
+        // Steps: Set0, Rest1 (120s), Set2, Rest3 (60s)
+        val full =
+            WorkoutSession(
+                "s", workout, 1_000, 500_000, SessionStatus.COMPLETED,
+                listOf(CompletedSet(0, 31_000), CompletedSet(2, 281_000)),
+                null,
+                listOf(CompletedRest(1, 211_000), CompletedRest(3, 400_000)),
+            )
+        assertEquals(
+            listOf<Long?>(30_000, 180_000, 70_000, 119_000),
+            full.timeline().map { it.millis },
+        )
+        val legacy = full.copy(completedRests = emptyList(), status = SessionStatus.ABANDONED)
+        val timeline = legacy.timeline()
+        assertEquals(listOf<Long?>(30_000, null, 250_000, null), timeline.map { it.millis })
+        assertTrue(timeline[2].approximate)
+        assertFalse(timeline[0].approximate)
+    }
+
+    @Test
     fun weeklyAnalysisCountsActualSetDatesAndMergesExerciseNames() {
         val exercise = Exercise(name = "Bench press", rests = listOf(0, 0))
         val workout =

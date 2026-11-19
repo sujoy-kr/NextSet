@@ -27,7 +27,7 @@ data class AppState(
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class AppViewModel(
     private val workouts: WorkoutRepository,
-    sessions: SessionRepository,
+    private val sessions: SessionRepository,
     private val preferences: SettingsRepository,
 ) : ViewModel() {
     private val retry = MutableStateFlow(0)
@@ -80,6 +80,8 @@ class AppViewModel(
 
     fun delete(id: String) = action { workouts.delete(id) }
 
+    fun deleteSession(id: String) = action { sessions.delete(id) }
+
     fun duplicate(id: String) = action { workouts.duplicate(id) }
 
     fun reorder(ids: List<String>) = action { workouts.reorder(ids) }
@@ -92,7 +94,9 @@ class AppViewModel(
 
     fun alertMode(mode: AlertMode) = action { preferences.alertMode(mode) }
 
-    fun secondsPerSet(seconds: Int) = action { preferences.secondsPerSet(seconds) }
+    fun setAdvance(mode: AdvanceMode) = action { preferences.setAdvance(mode) }
+
+    fun restAdvance(mode: AdvanceMode) = action { preferences.restAdvance(mode) }
 
     fun sound(uri: String?) = action { preferences.sound(uri) }
 

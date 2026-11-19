@@ -22,7 +22,7 @@ fun WorkoutsScreen(
     onDelete: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
     onPrepare: (String) -> Unit,
-    secondsPerSet: Int = 45,
+    sessions: List<com.sujoy.nextset.domain.WorkoutSession> = emptyList(),
 ) {
     var deletion by remember { mutableStateOf<WorkoutTemplate?>(null) }
     LazyColumn(
@@ -52,7 +52,7 @@ fun WorkoutsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(template.name, style = MaterialTheme.typography.titleLarge)
                             Text(
-                                workoutSummary(template, secondsPerSet),
+                                workoutSummary(template, sessions),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

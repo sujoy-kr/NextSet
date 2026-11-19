@@ -14,7 +14,7 @@ class NextSetApplication : Application() {
     val requestedSession = MutableStateFlow<String?>(null)
     val database by lazy {
         Room.databaseBuilder(this, NextSetDatabase::class.java, "nextset.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
     val workouts by lazy { LocalWorkoutRepository(database) }

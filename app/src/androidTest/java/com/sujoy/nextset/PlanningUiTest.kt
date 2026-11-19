@@ -175,15 +175,13 @@ class PlanningUiTest {
     }
 
     @Test
-    fun estimateAndSoundPreferencesPersistAndToneChangesCreateNewChannels() = runBlocking {
+    fun soundPreferencesPersistAndToneChangesCreateNewChannels() = runBlocking {
         val app = compose.activity.application as NextSetApplication
         val previous = app.settings.settings.first()
         val ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         try {
-            app.settings.secondsPerSet(60)
             app.settings.sound(ringtone.toString())
-            assertEquals(60, app.settings.settings.first().secondsPerSet)
             assertEquals(ringtone.toString(), app.settings.settings.first().soundUri)
             app.settings.alertMode(com.sujoy.nextset.data.AlertMode.SOUND)
             if (Build.VERSION.SDK_INT >= 33) {
@@ -229,9 +227,7 @@ class PlanningUiTest {
                 app.notifications.clearRest("tone-test", 2)
             }
             compose.activityRule.scenario.recreate()
-            assertEquals(60, app.settings.settings.first().secondsPerSet)
         } finally {
-            app.settings.secondsPerSet(previous.secondsPerSet)
             app.settings.sound(previous.soundUri)
             app.settings.alertMode(previous.alertMode)
         }

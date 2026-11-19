@@ -86,7 +86,7 @@ fun HomeScreen(
                     Text(today?.name ?: "Rest day", style = MaterialTheme.typography.headlineMedium)
                     Text(
                         today?.let {
-                            "${workoutSummary(it, state.settings.secondsPerSet)}\nMove at your own pace."
+                            "${workoutSummary(it, state.sessions)}\nMove at your own pace."
                         }
                             ?: "Take a breath. Recovery is part of the work. You can still choose a workout whenever you’re ready.",
                         style = MaterialTheme.typography.bodyLarge,
@@ -214,7 +214,7 @@ private fun WorkoutPicker(
                                         template.name,
                                         style = MaterialTheme.typography.titleMedium,
                                     )
-                                    Text(workoutSummary(template, state.settings.secondsPerSet))
+                                    Text(workoutSummary(template, state.sessions))
                                 }
                             }
                         }

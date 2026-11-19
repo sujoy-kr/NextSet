@@ -127,6 +127,9 @@ enum class SessionStatus {
 
 data class CompletedSet(val stepIndex: Int, val completedAt: Long)
 
+/** When the rest at [stepIndex] was left, whether by acknowledging the alert or skipping. */
+data class CompletedRest(val stepIndex: Int, val endedAt: Long)
+
 data class WorkoutSession(
     val id: String,
     val snapshot: WorkoutTemplate,
@@ -135,6 +138,7 @@ data class WorkoutSession(
     val status: SessionStatus,
     val completedSets: List<CompletedSet>,
     val recordedElapsedMillis: Long? = null,
+    val completedRests: List<CompletedRest> = emptyList(),
 ) {
     val elapsedMillis: Long
         get() =

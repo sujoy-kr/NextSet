@@ -185,7 +185,11 @@ class ExecutionStore(private val db: NextSetDatabase) {
                     now,
                 )
             change.completeSet?.let { db.sessions().insertSet(CompletedSetRow(id, it, now.wall)) }
-            change.undoFrom?.let { db.sessions().undo(id, it) }
+            change.endRest?.let { db.sessions().insertRest(CompletedRestRow(id, it, now.wall)) }
+            change.undoFrom?.let {
+                db.sessions().undo(id, it)
+                db.sessions().undoRests(id, it)
+            }
             save(change.state)
             if (change.state.terminal && row.status == SessionStatus.ACTIVE.name) {
                 db.sessions()

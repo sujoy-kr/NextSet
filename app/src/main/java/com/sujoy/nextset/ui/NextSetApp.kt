@@ -187,7 +187,7 @@ fun NextSetApp(application: NextSetApplication) {
                                 vm::delete,
                                 vm::reorder,
                                 { nav.navigate("prepare/$it") },
-                                secondsPerSet = state.settings.secondsPerSet,
+                                sessions = state.sessions,
                             )
                         }
                         composable("schedule") {
@@ -198,14 +198,15 @@ fun NextSetApp(application: NextSetApplication) {
                                 vm::routine,
                             )
                         }
-                        composable("history") { HistoryScreen(state.sessions, state) }
+                        composable("history") { HistoryScreen(state.sessions, state, vm::deleteSession) }
                         composable("settings") {
                             SettingsScreen(
                                 state.settings,
                                 vm::theme,
                                 vm::defaultRest,
-                                vm::secondsPerSet,
                                 vm::sound,
+                                vm::setAdvance,
+                                vm::restAdvance,
                             ) {
                                 ReminderSettings(
                                     state.settings,
@@ -265,7 +266,7 @@ fun NextSetApp(application: NextSetApplication) {
                                         }
                                     }
                                 },
-                                secondsPerSet = state.settings.secondsPerSet,
+                                sessions = state.sessions,
                             )
                         }
                         composable("session/{id}") { entry ->
@@ -282,7 +283,7 @@ fun NextSetApp(application: NextSetApplication) {
                                             }
                                         },
                                 )
-                            ExecutionScreen(execution, application.runtime) {
+                            ExecutionScreen(execution, application.runtime, state.settings) {
                                 nav.navigate("home") {
                                     popUpTo(nav.graph.findStartDestination().id)
                                     launchSingleTop = true

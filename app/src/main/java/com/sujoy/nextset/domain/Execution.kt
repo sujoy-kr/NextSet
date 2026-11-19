@@ -55,6 +55,7 @@ data class ExecutionChange(
     val state: ExecutionState,
     val completeSet: Int? = null,
     val undoFrom: Int? = null,
+    val endRest: Int? = null,
 )
 
 /** Deterministic reducer. Callers must compare revisions and persist set changes atomically. */
@@ -91,6 +92,7 @@ object ExecutionMachine {
         if (state.terminal) return ExecutionChange(state)
         var completed: Int? = null
         var undone: Int? = null
+        var restEnded: Int? = null
         fun advance(): ExecutionState {
             val next = state.index + 1
             val step = plan.getOrNull(next)
@@ -120,7 +122,10 @@ object ExecutionMachine {
                             completed = state.index
                             advance()
                         }
-                        Phase.REST_DONE -> advance()
+                        Phase.REST_DONE -> {
+                            restEnded = state.index
+                            advance()
+                        }
                         else -> state
                     }
                 Command.PAUSE ->
@@ -136,8 +141,10 @@ object ExecutionMachine {
                         )
                     else state
                 Command.SKIP_REST ->
-                    if (state.phase == Phase.REST || state.phase == Phase.REST_DONE) advance()
-                    else state
+                    if (state.phase == Phase.REST || state.phase == Phase.REST_DONE) {
+                        restEnded = state.index
+                        advance()
+                    } else state
                 Command.UNDO -> {
                     val lastSet = (0 until state.index).lastOrNull { plan[it] is WorkoutStep.Set }
                     if (lastSet != null) {
@@ -160,6 +167,7 @@ object ExecutionMachine {
             result.copy(revision = original.revision + if (changed) 1 else 0),
             completed,
             undone,
+            restEnded,
         )
     }
 }

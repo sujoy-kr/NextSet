@@ -29,4 +29,7 @@ interface SessionRepository {
     suspend fun recordSet(sessionId: String, stepIndex: Int, at: Long = System.currentTimeMillis())
 
     suspend fun finish(sessionId: String, completed: Boolean, at: Long = System.currentTimeMillis())
+
+    /** Removes a finished session and everything recorded for it; an active one is refused. */
+    suspend fun delete(sessionId: String)
 }

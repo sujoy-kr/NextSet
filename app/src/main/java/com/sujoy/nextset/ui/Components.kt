@@ -16,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sujoy.nextset.R
-import com.sujoy.nextset.domain.estimatedSeconds
+import com.sujoy.nextset.domain.expectedDuration
 
 @Composable
 fun PageTitle(kicker: String, title: String, subtitle: String? = null) {
@@ -194,7 +194,7 @@ fun RestSetting(label: String, seconds: Int, minimumSeconds: Int = 0, onChange: 
 @Composable
 fun workoutSummary(
     workout: com.sujoy.nextset.domain.WorkoutTemplate,
-    secondsPerSet: Int = 45,
+    sessions: List<com.sujoy.nextset.domain.WorkoutSession> = emptyList(),
 ): String =
     androidx.compose.ui.res.pluralStringResource(
         R.plurals.exercise_count,
@@ -207,4 +207,6 @@ fun workoutSummary(
             workout.totalSets,
             workout.totalSets,
         ) +
-        " · ~${elapsedLabel(workout.estimatedSeconds(secondsPerSet) * 1000)}"
+        workout.expectedDuration(sessions).let {
+            " · ~${elapsedLabel(it.seconds * 1000)}" + if (it.fromHistory) " avg" else ""
+        }

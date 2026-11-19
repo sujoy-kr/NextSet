@@ -32,7 +32,7 @@ fun PrepareScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
     onStart: () -> Unit,
-    secondsPerSet: Int = 45,
+    sessions: List<com.sujoy.nextset.domain.WorkoutSession> = emptyList(),
 ) {
     val context = LocalContext.current
     val permission =
@@ -95,11 +95,15 @@ fun PrepareScreen(
                     PageTitle(
                         "Your session plan",
                         template.name,
-                        workoutSummary(template, secondsPerSet),
+                        workoutSummary(template, sessions),
                     )
-                    Text("Estimate includes all saved rests and ${secondsPerSet}s per set.")
                     Text(
-                        "Hold the main surface for one second to complete each set. Rest finishes with an alert and waits for your acknowledgment.",
+                        if (template.expectedDuration(sessions).fromHistory)
+                            "Average of your completed sessions of this workout."
+                        else "Estimate includes all saved rests and ${DEFAULT_SECONDS_PER_SET}s per set. After you complete this workout, this shows your average time."
+                    )
+                    Text(
+                        "Complete each set and acknowledge the finished rest with a tap or a one-second hold, as chosen in Settings. Rest finishes with an alert and waits for your acknowledgment.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(

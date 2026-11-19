@@ -10,7 +10,7 @@ Android **7.0+ (API 24)** · Kotlin · Jetpack Compose · Material 3 · Room · 
 - Exercises with individual set counts and rest overrides, including the final set and zero rest. No weight or rep forms.
 - Supersets with two or more movements, unequal set counts, and separate movement, round and post-group rest defaults.
 - Choose fixed weekdays or a repeating daily workout/rest sequence (such as push → pull → rest) that continues across week boundaries. Start any saved workout without shifting the plan.
-- Workout summaries show exercise/set totals and estimated duration, including all configured rests plus a global time per set (45 seconds by default).
+- Workout summaries show exercise/set totals and estimated duration, using all configured rests plus 45 seconds per set until a workout has been completed, then the average time of its completed sessions.
 - Weekly analysis in History compares planned and completed sets for each exercise, with previous/next week navigation.
 - Choose a device ringtone or notification tone for rest alerts and workout reminders.
 - Minimal execution: hold for one second to complete a set; a deadline-based countdown turns red and waits for acknowledgment. Pause, resume, skip rest, undo and confirmed abandonment are available.
@@ -24,7 +24,7 @@ Fresh captures of the current app on an **Android 10 / API 29 emulator**, includ
 
 <p><img src="docs/images/home.png" width="220" alt="Home with exercise and set totals and estimated workout time" /> <img src="docs/images/workouts.png" width="220" alt="Workout library with duration estimates" /> <img src="docs/images/weekly-analysis.png" width="220" alt="Weekly analysis comparing completed and planned sets per exercise" /></p>
 <p><img src="docs/images/week.png" width="220" alt="Fixed weekday workout assignments" /> <img src="docs/images/sequence.png" width="220" alt="Repeating workout sequence with a start date and reorder controls" /> <img src="docs/images/sequence-preview.png" width="220" alt="Push, pull and rest repeating across the next seven days" /></p>
-<p><img src="docs/images/sound-settings.png" width="220" alt="Settings with ringtone and notification tone choices" /> <img src="docs/images/duration-settings.png" width="220" alt="Global time per set used for workout duration estimates" /> <img src="docs/images/settings-dark.png" width="220" alt="Dark theme and workout reminder settings" /></p>
+<p><img src="docs/images/sound-settings.png" width="220" alt="Settings with ringtone and notification tone choices" /> <img src="docs/images/duration-settings.png" width="220" alt="Settings" /> <img src="docs/images/settings-dark.png" width="220" alt="Dark theme and workout reminder settings" /></p>
 <p><img src="docs/images/exercise.png" width="220" alt="Exercise screen with one-second hold controls" /> <img src="docs/images/rest-complete.png" width="220" alt="Red rest-complete screen waiting for acknowledgment" /></p>
 
 ### Refresh the screenshots
@@ -61,7 +61,7 @@ Initial dependency/toolchain downloads need internet on the development machine.
 4. On **Home**, choose **Start workout**, select today's plan or any saved workout, review it, and start. Notification and precise-alarm access are optional.
 5. Hold the main surface for one second to complete a set. Short taps do nothing. When rest turns red, hold again to continue. Secondary controls offer undo, pause/resume, skip rest and end. Accessibility custom actions offer an alternative to holding.
 6. Leaving for Home preserves the session; **Resume workout** restores it. Ending saves an abandoned session. **History** shows actual training and **Weekly analysis**, which compares planned and completed sets per exercise. Completed counts use each set’s completion date, including sets in unfinished sessions; planned counts reflect your current templates and plan.
-7. **Settings** controls appearance, new-block default rest and optional workout reminders. Choose automatic timing or set a manual local time. Select a ringtone or notification tone and adjust **Time per set** for duration estimates. Estimates include rest after the final set; pauses and actual set durations can change the total.
+7. **Settings** controls appearance, new-block default rest and optional workout reminders. Choose automatic timing or set a manual local time. Select a ringtone or notification tone and choose whether sets and finished rests are confirmed by a tap or a one-second hold.
 
 Specific set overrides take priority over block defaults. Within supersets, movements with no remaining sets drop out of later rounds. Configured rest after the final workout set is retained. Rest has no product-imposed maximum; storage represents non-negative Int seconds.
 
@@ -76,7 +76,7 @@ In **Week → Repeating sequence**, add workouts or rest days, use the arrows to
 
 **History → Weekly analysis** follows your locale’s first weekday. Use **Previous**, **This week** and **Next** to compare planned and completed sets per exercise. Planned counts use the current templates and selected planning mode, including when viewing past weeks. Completed counts come from saved session snapshots and each set’s completion date in the current timezone, including abandoned or unfinished sessions. Matching exercise names are grouped without case or surrounding-space differences; renaming an exercise creates a separate group from its old history.
 
-Workout summaries on Home, in the library, in the workout picker and on the preparation screen show an approximate duration: **all configured rests + total sets × Time per set**. The global estimate defaults to **45 seconds per set**, can be changed in Settings, and does not change rest timers or limit how long a set can take. Per-set overrides, superset transitions and rest after the final set are included.
+Workout summaries on Home, in the library, in the workout picker and on the preparation screen show an approximate duration. Before a workout has a completed session, it is **all configured rests + total sets × 45 seconds**; afterwards it is the **average elapsed time of that workout's completed sessions** (abandoned sessions are ignored). Neither changes rest timers or limits how long a set can take. Per-set overrides, superset transitions and rest after the final set are included.
 
 In **Settings → Notification sound**, choose from **ringtones** or **notification tones**, or restore **App default**. The selected tone applies to both rest alerts and workout reminders when sound is enabled. Sound modes use alarm volume; **Follow device settings** uses notification volume. Android’s default ringtone and notification choices follow the system setting. If a custom tone is deleted or becomes inaccessible, alerts fall back to the app defaults. Android channel settings and Do Not Disturb still apply.
 
@@ -102,7 +102,7 @@ Reminders are off by default. Automatic timing uses up to 30 starts from the las
 - **`notifications/`** — monotonic clock adapter, serialized session runtime, permission-aware AlarmManager scheduling, receivers and notification channels.
 - **`ui/`** — Compose screens, lifecycle-aware ViewModels/StateFlow, saved editor drafts and navigation. `NextSetApplication` wires dependencies; Activity hosts Compose and consumes notification intents.
 
-Execution observes its checkpoint, session status and completed sets in one Room transaction. Template deletion clears weekday assignments without touching history; sequence entries keep their position and can be replaced or removed. Session snapshots are independent of editable templates. Planning mode, sequence/start date, time per set and sound selection are stored locally in DataStore; the existing Room schema stays at version 3. Accepted execution transitions finish their persistence/alarm work even if their screen is removed.
+Execution observes its checkpoint, session status and completed sets in one Room transaction. Template deletion clears weekday assignments without touching history; sequence entries keep their position and can be replaced or removed. Session snapshots are independent of editable templates. Planning mode, sequence/start date, tap/hold preferences and sound selection are stored locally in DataStore; the existing Room schema stays at version 3. Accepted execution transitions finish their persistence/alarm work even if their screen is removed.
 
 Schemas **1–3** are committed in `app/schemas`. Migrations preserve existing records; no destructive fallback is enabled. [Execution and recovery policies](docs/EXECUTION.md) describe deadlines, pauses, reboot behavior and reminder learning.
 

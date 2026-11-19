@@ -15,8 +15,9 @@ fun SettingsScreen(
     settings: UserSettings,
     onTheme: (ThemeMode) -> Unit,
     onRest: (Int) -> Unit,
-    onSetTime: (Int) -> Unit,
     onSound: (String?) -> Unit,
+    onSetAdvance: (AdvanceMode) -> Unit,
+    onRestAdvance: (AdvanceMode) -> Unit,
     notifications: @Composable () -> Unit = {},
 ) {
     LazyColumn(
@@ -54,21 +55,17 @@ fun SettingsScreen(
                 }
             }
         }
+        item {
+            Text("Moving forward", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Choose how you confirm each step during a workout.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            AdvanceChoice("After a set is over", settings.setAdvance, onSetAdvance)
+            AdvanceChoice("After the rest timer is over", settings.restAdvance, onRestAdvance)
+        }
         item { notifications() }
         item { SoundSettings(settings.soundUri, onSound) }
-        item {
-            Text("Workout duration estimates", style = MaterialTheme.typography.titleLarge)
-            Text(
-                "Estimates add every saved rest to this time for each set. Actual workout time can vary."
-            )
-            RestSetting(
-                "Time per set",
-                settings.secondsPerSet,
-                minimumSeconds = 1,
-                onChange = onSetTime,
-            )
-            Text("Use at least 1 second per set.", style = MaterialTheme.typography.bodySmall)
-        }
         item {
             HorizontalDivider()
             Spacer(Modifier.height(20.dp))
@@ -109,6 +106,33 @@ fun SettingsScreen(
                 stringResource(R.string.ui_nextset_1_0),
                 style = MaterialTheme.typography.labelLarge,
             )
+        }
+    }
+}
+
+@Composable
+private fun AdvanceChoice(title: String, selected: AdvanceMode, onSelect: (AdvanceMode) -> Unit) {
+    Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+    AdvanceMode.entries.forEach { mode ->
+        Surface(
+            onClick = { onSelect(mode) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selected == mode,
+                    onClick = null,
+                    modifier = Modifier.padding(16.dp),
+                )
+                Text(
+                    when (mode) {
+                        AdvanceMode.HOLD -> "Hold for 1 second (default)"
+                        AdvanceMode.TAP -> "Tap"
+                    },
+                    Modifier.padding(vertical = 18.dp),
+                )
+            }
         }
     }
 }

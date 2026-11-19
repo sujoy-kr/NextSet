@@ -28,13 +28,20 @@ enum class AlertMode(val sound: Boolean, val vibrate: Boolean) {
     DEVICE(true, true),
 }
 
+/** How the user confirms a step: tap anywhere, or hold for one second. */
+enum class AdvanceMode {
+    HOLD,
+    TAP,
+}
+
 data class UserSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val defaultRest: Int = 90,
     val reminders: Boolean = false,
     val manualReminderMinute: Int? = null,
     val alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION,
-    val secondsPerSet: Int = 45,
+    val setAdvance: AdvanceMode = AdvanceMode.HOLD,
+    val restAdvance: AdvanceMode = AdvanceMode.HOLD,
     val soundUri: String? = null,
     val routine: RoutinePlan = RoutinePlan(),
 )
@@ -46,7 +53,8 @@ class SettingsRepository(context: Context) {
     private val remindersKey = booleanPreferencesKey("reminders_enabled")
     private val minuteKey = intPreferencesKey("reminder_minute")
     private val alertModeKey = stringPreferencesKey("alert_mode")
-    private val setTimeKey = intPreferencesKey("seconds_per_set")
+    private val setAdvanceKey = stringPreferencesKey("set_advance")
+    private val restAdvanceKey = stringPreferencesKey("rest_advance")
     private val soundKey = stringPreferencesKey("sound_uri")
     private val routineModeKey = stringPreferencesKey("routine_mode")
     private val routineEntriesKey = stringPreferencesKey("routine_entries")
@@ -63,7 +71,12 @@ class SettingsRepository(context: Context) {
                     it[minuteKey],
                     AlertMode.entries.find { mode -> mode.name == it[alertModeKey] }
                         ?: AlertMode.SOUND_AND_VIBRATION,
-                    secondsPerSet = (it[setTimeKey] ?: 45).coerceAtLeast(1),
+                    setAdvance =
+                        AdvanceMode.entries.find { m -> m.name == it[setAdvanceKey] }
+                            ?: AdvanceMode.HOLD,
+                    restAdvance =
+                        AdvanceMode.entries.find { m -> m.name == it[restAdvanceKey] }
+                            ?: AdvanceMode.HOLD,
                     soundUri = it[soundKey],
                     routine =
                         RoutinePlan(
@@ -83,9 +96,12 @@ class SettingsRepository(context: Context) {
                 )
             }
 
-    suspend fun secondsPerSet(seconds: Int) {
-        require(seconds > 0)
-        store.edit { it[setTimeKey] = seconds }
+    suspend fun setAdvance(mode: AdvanceMode) {
+        store.edit { it[setAdvanceKey] = mode.name }
+    }
+
+    suspend fun restAdvance(mode: AdvanceMode) {
+        store.edit { it[restAdvanceKey] = mode.name }
     }
 
     suspend fun sound(uri: String?) {

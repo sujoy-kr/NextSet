@@ -27,8 +27,11 @@ data class RoutinePlan(
         else indexOn(date)?.let { entries[it] }
 }
 
+/** Assumed active time per set; only used for the prediction before real sessions exist. */
+const val DEFAULT_SECONDS_PER_SET = 45
+
 /** Uses exactly the rests executed by the timer, including per-set overrides and final rest. */
-fun WorkoutTemplate.estimatedSeconds(secondsPerSet: Int = 45): Long {
+fun WorkoutTemplate.estimatedSeconds(secondsPerSet: Int = DEFAULT_SECONDS_PER_SET): Long {
     require(secondsPerSet > 0)
     return sequence().sumOf {
         when (it) {
@@ -36,6 +39,24 @@ fun WorkoutTemplate.estimatedSeconds(secondsPerSet: Int = 45): Long {
             is WorkoutStep.Rest -> it.seconds.toLong()
         }
     }
+}
+
+/** A workout's expected duration and whether it comes from past sessions or the per-set estimate. */
+data class DurationExpectation(val seconds: Long, val fromHistory: Boolean)
+
+/**
+ * Average elapsed time of this workout's completed sessions; with no history, the estimate from
+ * [estimatedSeconds].
+ */
+fun WorkoutTemplate.expectedDuration(sessions: List<WorkoutSession>): DurationExpectation {
+    val past =
+        sessions.filter {
+            it.status == SessionStatus.COMPLETED &&
+                it.snapshot.id == id &&
+                it.elapsedMillis > 0
+        }
+    return if (past.isEmpty()) DurationExpectation(estimatedSeconds(), false)
+    else DurationExpectation(past.sumOf { it.elapsedMillis } / past.size / 1000, true)
 }
 
 data class ExerciseVolume(val name: String, val planned: Int, val completed: Int)

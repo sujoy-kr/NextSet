@@ -93,6 +93,22 @@ data class SessionRow(
 )
 data class CompletedSetRow(val sessionId: String, val stepIndex: Int, val completedAt: Long)
 
+@Entity(
+    tableName = "completed_rests",
+    primaryKeys = ["sessionId", "stepIndex"],
+    foreignKeys =
+        [
+            ForeignKey(
+                entity = SessionRow::class,
+                parentColumns = ["id"],
+                childColumns = ["sessionId"],
+                onDelete = ForeignKey.CASCADE,
+            )
+        ],
+    indices = [Index("sessionId")],
+)
+data class CompletedRestRow(val sessionId: String, val stepIndex: Int, val endedAt: Long)
+
 data class BlockRelation(
     @Embedded val block: BlockRow,
     @Relation(parentColumn = "id", entityColumn = "blockId") val exercises: List<ExerciseRow>,
@@ -107,6 +123,8 @@ data class TemplateRelation(
 data class SessionRelation(
     @Embedded val session: SessionRow,
     @Relation(parentColumn = "id", entityColumn = "sessionId") val sets: List<CompletedSetRow>,
+    @Relation(parentColumn = "id", entityColumn = "sessionId")
+    val rests: List<CompletedRestRow>,
 )
 
 @Dao
@@ -168,6 +186,14 @@ interface SessionDao {
     @Query("DELETE FROM completed_sets WHERE sessionId = :id AND stepIndex >= :index")
     suspend fun undo(id: String, index: Int)
 
+    @Query("DELETE FROM completed_rests WHERE sessionId = :id AND stepIndex >= :index")
+    suspend fun undoRests(id: String, index: Int)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertRest(row: CompletedRestRow)
+
+    @Query("DELETE FROM sessions WHERE id = :id AND status != 'ACTIVE'")
+    suspend fun deleteFinished(id: String): Int
+
     @Insert suspend fun insert(row: SessionRow)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSet(row: CompletedSetRow)
@@ -187,10 +213,11 @@ interface SessionDao {
             ScheduleRow::class,
             SessionRow::class,
             CompletedSetRow::class,
+            CompletedRestRow::class,
             ExecutionRow::class,
             ReminderDelivery::class,
         ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class NextSetDatabase : RoomDatabase() {
@@ -220,6 +247,19 @@ val MIGRATION_2_3 =
             )
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS reminder_deliveries (date TEXT NOT NULL PRIMARY KEY, templateId TEXT NOT NULL)"
+            )
+        }
+    }
+
+/** Rest timings are new; existing sessions simply have none. */
+val MIGRATION_3_4 =
+    object : androidx.room.migration.Migration(3, 4) {
+        override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS completed_rests (sessionId TEXT NOT NULL, stepIndex INTEGER NOT NULL, endedAt INTEGER NOT NULL, PRIMARY KEY(sessionId, stepIndex), FOREIGN KEY(sessionId) REFERENCES sessions(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_completed_rests_sessionId ON completed_rests (sessionId)"
             )
         }
     }

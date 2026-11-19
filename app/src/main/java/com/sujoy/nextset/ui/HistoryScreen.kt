@@ -2,6 +2,7 @@ package com.sujoy.nextset.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
@@ -10,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.sujoy.nextset.R
 import com.sujoy.nextset.domain.*
 import java.time.Instant
@@ -32,7 +34,12 @@ private fun statusLabel(status: SessionStatus) =
     }
 
 @Composable
-fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
+fun HistoryScreen(
+    sessions: List<WorkoutSession>,
+    state: AppState? = null,
+    onDelete: (String) -> Unit = {},
+) {
+    var deleting by rememberSaveable { mutableStateOf<String?>(null) }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var monthValue by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var dateValue by rememberSaveable { mutableStateOf<String?>(null) }
@@ -122,6 +129,8 @@ fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
         ?.let { session ->
             AlertDialog(
                 onDismissRequest = { selected = null },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                properties = DialogProperties(usePlatformDefaultWidth = false),
                 title = { Text(session.snapshot.name) },
                 text = {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -135,6 +144,12 @@ fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
                             Text(
                                 "${session.completedSets.size}/${session.snapshot.totalSets} sets completed"
                             )
+                            Text("Total time ${elapsedLabel(session.elapsedMillis)}")
+                            Text(
+                                "Each step shows how long it actually took. Rests show the timer length and how long you stayed on the screen. Paused time is included.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             Text(
                                 stringResource(
                                     R.string
@@ -142,15 +157,11 @@ fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
                                 )
                             )
                         }
-                        session.snapshot.sequence().forEachIndexed { index, step ->
-                            if (step is WorkoutStep.Set)
-                                item(key = index) {
-                                    val completed =
-                                        session.completedSets.any { it.stepIndex == index }
-                                    Text(
-                                        "${if (completed) "✓" else "○"} ${step.exerciseName} · Set ${step.number}"
-                                    )
-                                }
+                        items(session.timeline(), key = { it.index }) { timing ->
+                            val completed =
+                                timing.step is WorkoutStep.Set &&
+                                    session.completedSets.any { it.stepIndex == timing.index }
+                            TimingRow(timing, completed)
                         }
                     }
                 },
@@ -159,6 +170,71 @@ fun HistoryScreen(sessions: List<WorkoutSession>, state: AppState? = null) {
                         Text(stringResource(R.string.ui_done))
                     }
                 },
+                dismissButton = {
+                    if (session.status != SessionStatus.ACTIVE)
+                        TextButton(onClick = { deleting = session.id }) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                        }
+                },
             )
         }
+
+    sessions
+        .find { it.id == deleting }
+        ?.let { session ->
+            AlertDialog(
+                onDismissRequest = { deleting = null },
+                title = { Text("Delete this session?") },
+                text = {
+                    Text(
+                        "${session.snapshot.name} from ${timestamp(session.startedAt)} will be removed from your history and weekly analysis. This can’t be undone."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete(session.id)
+                            deleting = null
+                            selected = null
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+            )
+        }
+}
+
+@Composable
+private fun TimingRow(timing: StepTiming, completed: Boolean) {
+    val time = timing.millis?.let(::elapsedLabel)
+    when (val step = timing.step) {
+        is WorkoutStep.Set ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    "${if (completed) "✓" else "○"} ${step.exerciseName} · Set ${step.number}",
+                    Modifier.weight(1f),
+                )
+                if (time != null)
+                    Text(if (timing.approximate) "$time*" else time, style = MaterialTheme.typography.labelLarge)
+            }
+        is WorkoutStep.Rest ->
+            if (time != null)
+                Row(Modifier.fillMaxWidth().padding(start = 20.dp), Arrangement.SpaceBetween) {
+                    Text(
+                        "Rest · timer ${elapsedLabel(step.seconds * 1000L)}",
+                        Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        time,
+                        color =
+                            if ((timing.millis ?: 0) > step.seconds * 1000L + 1_000)
+                                MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+    }
 }

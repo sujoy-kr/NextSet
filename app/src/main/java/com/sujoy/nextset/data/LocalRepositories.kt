@@ -144,6 +144,7 @@ internal fun SessionRelation.domain() =
         SessionStatus.valueOf(session.status),
         sets.sortedBy { it.stepIndex }.map { CompletedSet(it.stepIndex, it.completedAt) },
         session.elapsedMillis,
+        rests.sortedBy { it.stepIndex }.map { CompletedRest(it.stepIndex, it.endedAt) },
     )
 
 class LocalSessionRepository(private val db: NextSetDatabase) : SessionRepository {
@@ -184,6 +185,14 @@ class LocalSessionRepository(private val db: NextSetDatabase) : SessionRepositor
                 TemplateCodec.decode(session.session.snapshot).sequence().getOrNull(stepIndex)
             require(step is WorkoutStep.Set) { "Only workout sets can be completed." }
             dao.insertSet(CompletedSetRow(sessionId, stepIndex, at))
+        }
+
+    override suspend fun delete(sessionId: String) =
+        db.withTransaction {
+            if (dao.deleteFinished(sessionId) == 0)
+                require(dao.row(sessionId) == null) {
+                    "Finish or abandon the active session before deleting it."
+                }
         }
 
     override suspend fun finish(sessionId: String, completed: Boolean, at: Long) =

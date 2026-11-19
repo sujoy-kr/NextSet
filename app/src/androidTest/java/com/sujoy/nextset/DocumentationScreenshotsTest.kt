@@ -84,7 +84,6 @@ class DocumentationScreenshotsTest {
             listOf(push, pull, legs).forEach { app.workouts.save(it) }
             app.settings.theme(ThemeMode.LIGHT)
             app.settings.alertMode(AlertMode.SOUND_AND_VIBRATION)
-            app.settings.secondsPerSet(45)
             app.settings.sound(null)
             app.settings.routine(RoutinePlan())
             app.workouts.assign(DayOfWeek.MONDAY, push.id)
