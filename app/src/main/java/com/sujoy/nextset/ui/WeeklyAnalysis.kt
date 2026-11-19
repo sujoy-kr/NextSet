@@ -12,7 +12,7 @@ import java.util.Locale
 
 @Composable
 fun WeeklyAnalysis(state: AppState) {
-    var offset by rememberSaveable { mutableStateOf(0L) }
+    var offset by rememberSaveable { mutableLongStateOf(0L) }
     val first = WeekFields.of(Locale.getDefault()).firstDayOfWeek
     val start =
         state.today

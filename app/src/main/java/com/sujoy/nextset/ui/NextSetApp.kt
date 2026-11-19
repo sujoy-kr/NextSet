@@ -173,7 +173,7 @@ fun NextSetApp(application: NextSetApplication) {
                         composable("home") {
                             HomeScreen(
                                 state,
-                                { nav.navigate("edit/new") },
+                                { nav.navigate("edit/new") { launchSingleTop = true } },
                                 { nav.navigate("schedule") },
                                 { nav.navigate("prepare/$it") },
                                 { nav.navigate("session/$it") },
@@ -182,7 +182,7 @@ fun NextSetApp(application: NextSetApplication) {
                         composable("workouts") {
                             WorkoutsScreen(
                                 state.templates,
-                                { nav.navigate("edit/$it") },
+                                { nav.navigate("edit/$it") { launchSingleTop = true } },
                                 vm::duplicate,
                                 vm::delete,
                                 vm::reorder,
@@ -194,7 +194,7 @@ fun NextSetApp(application: NextSetApplication) {
                             ScheduleScreen(
                                 state,
                                 vm::assign,
-                                { nav.navigate("edit/new") },
+                                { nav.navigate("edit/new") { launchSingleTop = true } },
                                 vm::routine,
                             )
                         }
@@ -241,7 +241,7 @@ fun NextSetApp(application: NextSetApplication) {
                                 state.sessions.any { it.status == SessionStatus.ACTIVE },
                                 opening,
                                 { nav.popBackStack() },
-                                { nav.navigate("edit/$it") },
+                                { nav.navigate("edit/$it") { launchSingleTop = true } },
                                 {
                                     if (!opening) {
                                         opening = true
